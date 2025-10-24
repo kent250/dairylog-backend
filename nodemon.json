@@ -1,0 +1,13 @@
+{
+    "watch": [
+        "src"
+    ],
+    "ext": "ts,json",
+    "ignore": [
+        "src/**/*.test.ts",
+        "node_modules"
+    ],
+    "exec": "node --import=tsx src/server.ts",
+    "legacyWatch": true,
+    "delay": "1000"
+}

@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+    env_file:
+      - .env.development
+    develop:
+      watch:
+        - path: ./package.json
+          action: rebuild
+        - path: ./package-lock.json
+          action: rebuild
+        - path: ./nodemon.json
+          action: rebuild
+        - path: ./src
+          target: /app/src
+          action: sync
+    # Sync local code changes with the container in real time (.:/app)
+    # The second line (/app/node_modules) keeps dependencies isolated
+    # so Docker’s installed packages aren’t replaced by an empty folder from the host.
+    volumes:
+      - .:/app
+      - /app/node_modules
+  
+

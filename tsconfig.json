@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "module": "ES2020",
+        "target": "ESNext",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "outDir": "./dist",
+        "rootDir": ".",
+        "strict": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": false,
+        "isolatedModules": true,
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "node_modules/*"
+            ]
+        }
+    },
+    "types": [
+        "jest"
+    ],
+    "include": [
+        "src/**/*",
+        "__tests__/**/*"
+    ]
+}
