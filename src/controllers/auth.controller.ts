@@ -7,7 +7,20 @@ import { AppError } from '../utils/error-utils/AppError.js';
 import { ERROR_CODES } from '../utils/error-utils/errorCodes.js';
 import { ApiResponse } from '../utils/api-response.js';
 
+
+/**
+ * Registers a new collection user.
+ *
+ * Validates required fields (username, email, password, and collection name),
+ * ensures uniqueness across existing users, hashes the password, and saves
+ * the new user record to the database. Returns the created user data on success.
+ *
+ * @param {Request} req - Express request object containing user registration data.
+ * @param {Response} res - Express response object used to send back the result.
+ * @returns {Promise<Response>} JSON response with the newly created user or an error.
+ */
 export const registerNewCollectionUser = async (req: Request, res: Response) => {
+
     const {
         collection_name,
         username,
