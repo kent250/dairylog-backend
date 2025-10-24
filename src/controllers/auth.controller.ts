@@ -86,7 +86,6 @@ export const registerNewCollectionUser = async (req: Request, res: Response) => 
 
         const newUser = insertedUsers[0];
 
-
         return ApiResponse.ok(res, newUser, "Collection User registered successfully");
 
     } catch (error) {
