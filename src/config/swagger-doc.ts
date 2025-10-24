@@ -6,14 +6,14 @@ const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.1.1',
         info: {
-            title: 'Express TS API Boilerplate',
+            title: 'DairyLog API Documentation',
             version: '1.0.0',
             description:
-                'A clean and scalable TypeScript + Express backend boilerplate with modular architecture, error handling, and testing setup.',
+                'Express.js + TypeScript backend server for the DairyLog app. Handles JWT authentication, farmer management, and milk collection data using driizzle and PostgreSQL.',
         },
         servers: [
             {
-                url: `http://localhost:${config.port}`,
+                url: `http://localhost:${config.port}/api`,
                 description: 'Development server',
             },
         ],
