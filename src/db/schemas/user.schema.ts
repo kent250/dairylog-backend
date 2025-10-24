@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import {
     createInsertSchema,
     createSelectSchema,
@@ -14,11 +14,11 @@ import type { z } from 'zod';
 // ------------------------------------------------------------------
 
 export const users = pgTable('users', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    name: text('name'),
-    email: text('email').notNull().unique(),
-    password: text('password').notNull(),
-
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
+    collection_name: varchar('collection_name'),
+    username: varchar('username').unique().notNull(),
+    email: varchar('email').notNull().unique(),
+    password: text('password').notNull().unique(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -38,6 +38,9 @@ export const users = pgTable('users', {
  */
 export const insertUserSchema = createInsertSchema(users, {
     // Add Zod refinements for validation
+    // These fields are already REQUIRED by default because of Drizzle's .notNull()
+    username: (schema) =>
+        schema.min(3, { message: 'Username must be at least 3 characters long' }), // <-- OPTIONAL ENHANCEMENT
     email: (schema) =>
         schema.email({ message: 'Invalid email address' }),
     password: (schema) =>
