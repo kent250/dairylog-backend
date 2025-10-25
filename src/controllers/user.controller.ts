@@ -11,7 +11,7 @@ import { ApiResponse } from '../utils/api-response.js';
 import { asyncHandler } from '../utils/syncHandler.js';
 
 
-import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import type { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 
 
