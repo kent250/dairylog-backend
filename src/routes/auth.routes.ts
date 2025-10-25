@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerNewCollectionUser } from "../controllers/auth.controller.js";
+import { registerNewCollectionUser, login } from "../controllers/auth.controller.js";
 const router = Router();
 
 /**
@@ -129,7 +129,106 @@ const router = Router();
  *                       type: integer
  *                       example: 500
  */
-
 router.post("/register", registerNewCollectionUser);
+
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     summary: Log in a dairy collection user
+ *     description: Authenticates dairy user with username and password and returns a JWT token if valid.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: admin
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: admin123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 message:
+ *                   type: string
+ *                   example: Login successful
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2025-10-24T23:59:54.073Z
+ *       400:
+ *         description: Missing username or password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: VALIDATION_ERROR
+ *                     message:
+ *                       type: string
+ *                       example: Username and password are required
+ *                     statusCode:
+ *                       type: integer
+ *                       example: 400
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: UNAUTHORIZED
+ *                     message:
+ *                       type: string
+ *                       example: Invalid credentials
+ *                     statusCode:
+ *                       type: integer
+ *                       example: 401
+ */
+
+router.post("/login", login);
 
 export default router;
