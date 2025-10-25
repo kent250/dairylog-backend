@@ -2,8 +2,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { z } from 'zod';
 
-import { AppError } from "../utils/error-utils/AppError";
-import { ERROR_CODES } from "../utils/error-utils/errorCodes";
+import { AppError } from "../utils/error-utils/AppError.js";
+import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
 
 /**
  * Loads environment variables from a .env file based on NODE_ENV.
