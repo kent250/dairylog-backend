@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { eq, or } from 'drizzle-orm';
@@ -23,7 +23,7 @@ import { asyncHandler } from '../utils/syncHandler.js';
  * @param {Response} res - Express response object used to send back the result.
  * @returns {Promise<Response>} JSON response with the newly created user or an error.
  */
-export const registerNewCollectionUser = async (req: Request, res: Response) => {
+export const registerNewCollectionUser = asyncHandler(async (req: Request, res: Response) => {
 
     const {
         collection_name,
@@ -91,7 +91,7 @@ export const registerNewCollectionUser = async (req: Request, res: Response) => 
 
     return ApiResponse.ok(res, newUser, "Collection User registered successfully");
 
-};
+});
 
 
 

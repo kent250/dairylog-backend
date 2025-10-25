@@ -8,4 +8,5 @@ router.use("/auth", authRoutes);
 
 router.use('/doc', swaggerUi.serve, swaggerUi.setup(specs));
 
+
 export default router;
