@@ -60,18 +60,18 @@ export const VALIDATION_ERRORS = {
         message: 'Insufficient permissions.',
         httpStatus: 403,
     },
+    REFRESH_TOKEN_REQUIRED: {
+        code: 'REFRESH_TOKEN_REQUIRED',
+        message: 'Refresh token required.',
+        httpStatus: 401,
+    },
+    BAD_REQUEST: {
+        code: 'BAD_REQUEST',
+        message: 'The request was malformed or invalid.',
+        httpStatus: 400,
+    },
 
-    // Server errors (5xx)
-    INTERNAL_ERROR: {
-        code: 'INTERNAL_ERROR',
-        message: 'Internal server error.',
-        httpStatus: 500,
-    },
-    DATABASE_ERROR: {
-        code: 'DATABASE_ERROR',
-        message: 'Database operation failed.',
-        httpStatus: 500,
-    },
+
 } as const satisfies Record<string, ErrorDefinition>;
 
 /**

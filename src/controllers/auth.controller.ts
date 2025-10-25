@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, and, gt } from 'drizzle-orm';
 import crypto from 'crypto';
 
 import { db } from '../db/index.js';
@@ -98,7 +98,6 @@ export const registerNewCollectionUser = asyncHandler(async (req: Request, res: 
 });
 
 
-
 /**
  * Logs in an existing collection user.
  *
@@ -164,4 +163,149 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     };
 
     return ApiResponse.ok(res, { token }, "Login successful");
+});
+
+
+/**
+ * Refresh user access and refresh tokens.
+ *
+ * This function handles secure token rotation. It:
+ *  - Validates the provided refresh token and user ID.
+ *  - Confirms the refresh token exists and hasn’t expired.
+ *  - Revokes (deletes) the old refresh token from the database.
+ *  - Issues a new refresh token and access token.
+ *  - Returns both tokens in the response.
+ *
+ * Errors:
+ *  - Throws `REFRESH_TOKEN_REQUIRED` if no refresh token is provided.
+ *  - Throws `BAD_REQUEST` if `userId` is missing.
+ *  - Throws `FORBIDDEN` if the provided refresh token is invalid or expired.
+ *  - Throws `INTERNAL_ERROR` if JWT secrets or DB issues occur.
+ *
+ * @async
+ * @function refreshToken
+ * @param {Request} req - Express request object. Expects `{ refreshToken, userId }` in the body.
+ * @param {Response} res - Express response object used to return the new tokens.
+ * @returns {Promise<Response>} A JSON response containing the new access and refresh tokens.
+ */
+export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
+
+    const { refreshToken: providedRefreshToken, userId } = req.body;
+
+    if (!providedRefreshToken) {
+        throw new AppError(ERROR_CODES.REFRESH_TOKEN_REQUIRED);
+    }
+    if (!userId) {
+        throw new AppError(ERROR_CODES.BAD_REQUEST, 'User ID is required for token refresh.');
+    }
+
+    const accessSecret = process.env.JWT_ACCESS_SECRET;
+    const refreshSecret = process.env.JWT_REFRESH_SECRET;
+
+    if (!accessSecret || !refreshSecret) {
+        throw new AppError(ERROR_CODES.INTERNAL_ERROR, 'JWT configuration missing');
+    }
+
+
+    const potentialTokens = await db.select().from(refreshTokensTable)
+        .where(
+            and(
+                eq(refreshTokensTable.user_id, userId),
+                gt(refreshTokensTable.expiresAt, new Date())
+            )
+        );
+
+    let foundTokenRecord = null;
+    let user = null;
+
+    const tokensToCheck = potentialTokens.length > 0
+        ? potentialTokens
+        : [{ token: await hashData('dummy-token-for-timing'), id: 0, user_id: userId, expiresAt: new Date(0) }];
+
+    for (const record of tokensToCheck) {
+        const isMatch = await bcrypt.compare(providedRefreshToken, record.token);
+        if (isMatch && potentialTokens.length > 0) {
+            foundTokenRecord = record;
+            const usersFound = await db.select().from(users)
+                .where(eq(users.id, record.user_id))
+                .limit(1);
+            if (usersFound.length > 0) {
+                user = usersFound[0];
+            }
+            break;
+        }
+    }
+
+    if (!foundTokenRecord || !user) {
+        throw new AppError(ERROR_CODES.FORBIDDEN, 'Invalid refresh token');
+    }
+
+
+    await db.delete(refreshTokensTable).where(eq(refreshTokensTable.id, foundTokenRecord.id));
+
+    const newRefreshToken = crypto.randomBytes(64).toString('hex');
+    const newRefreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const newHashedRefreshToken = await hashData(newRefreshToken);
+
+    await db.insert(refreshTokensTable).values({
+        token: newHashedRefreshToken,
+        user_id: user.id,
+        expiresAt: newRefreshTokenExpiry,
+    });
+
+    // Generate a new access token
+    const newAccessTokenPayload = { userId: user.id, username: user.username };
+    const newAccessToken = jwt.sign(newAccessTokenPayload, accessSecret, { expiresIn: '15m' });
+
+
+    const token = {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+    };
+
+    return ApiResponse.ok(res, { token }, "Token Refresh successful");
+});
+
+
+
+/**
+ * Logs out a user by invalidating their refresh token.
+ *
+ * This endpoint expects a `refreshToken` in the request body.
+ * It searches for a matching hashed token in the database,
+ * deletes it if found, and returns a success response.
+ * If no token is provided or no match is found, it still returns
+ * a generic success message to prevent token enumeration.
+ *
+ * @route POST /logout
+ * @param {Request} req - Express request object containing the refresh token in the body.
+ * @param {Response} res - Express response object used to return the logout result.
+ * @returns {Promise<Response>} JSON response indicating logout success.
+ * @throws {AppError} If the refresh token is missing or a database error occurs.
+ */
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+
+    const { refreshToken: providedRefreshToken } = req.body;
+
+    if (!providedRefreshToken) {
+        throw new AppError(ERROR_CODES.REFRESH_TOKEN_REQUIRED);
+    }
+
+
+    const potentialTokens = await db.select().from(refreshTokensTable);
+
+    let foundTokenId = null;
+    for (const record of potentialTokens) {
+        const isMatch = await bcrypt.compare(providedRefreshToken, record.token);
+        if (isMatch) {
+            foundTokenId = record.id;
+            break;
+        }
+    }
+
+    if (foundTokenId) {
+        await db.delete(refreshTokensTable).where(eq(refreshTokensTable.id, foundTokenId));
+        return ApiResponse.ok(res, {}, "Logout successful");
+    }
+    return ApiResponse.ok(res, {}, "Logout successful");
 });
