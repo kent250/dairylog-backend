@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import { AppError } from '../utils/error-utils/AppError.js';
 import { ERROR_CODES } from '../utils/error-utils/errorCodes.js';
-import { config } from '../config/env';
+import { config } from '../config/env.js';
 
 export interface AuthenticatedRequest extends Request {
     user?: {
