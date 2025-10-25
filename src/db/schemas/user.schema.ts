@@ -4,7 +4,9 @@ import {
     createSelectSchema,
     createUpdateSchema,
 } from 'drizzle-zod';
+import { relations } from 'drizzle-orm';
 import type { z } from 'zod';
+import { refreshTokensTable } from './refresh-token.schema.js';
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -92,3 +94,9 @@ export type NewUser = z.infer<typeof insertUserSchema>;
  * Represents the data that can be used to update a user.
  */
 export type UpdateUser = z.infer<typeof updateUserSchema>;
+
+
+
+export const usersRelations = relations(users, ({ many }) => ({
+    refreshTokens: many(refreshTokensTable),
+}));
