@@ -2,14 +2,19 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { eq, or } from 'drizzle-orm';
+import crypto from 'crypto';
 
-import { users } from '../db/schemas/user.schema.js';
 import { db } from '../db/index.js';
+import { users } from '../db/schemas/user.schema.js';
+import { refreshTokensTable } from '../db/schemas/refresh-token.schema.js';
+
 import { AppError } from '../utils/error-utils/AppError.js';
 import { ERROR_CODES } from '../utils/error-utils/errorCodes.js';
 import { ApiResponse } from '../utils/api-response.js';
-import { config } from '../config/env.js';
 import { asyncHandler } from '../utils/syncHandler.js';
+import { hashData } from '../utils/auth-utils.js';
+
+import { config } from '../config/env.js';
 
 
 /**
@@ -65,8 +70,7 @@ export const registerNewCollectionUser = asyncHandler(async (req: Request, res: 
     }
 
     // Hash the password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await hashData(password);
 
     const insertedUsers = await db.insert(users)
         .values({
@@ -128,21 +132,36 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
         throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Invalid credentials');
     }
 
-    const secret = config.JWT_SECRET;
-    if (!secret) {
+    const accessSecret = config.JWT_ACCESS_SECRET;
+    const refreshSecret = config.JWT_REFRESH_SECRET;
+
+    if (!accessSecret || !refreshSecret) {
         throw new AppError(ERROR_CODES.INTERNAL_ERROR, 'JWT configuration missing');
     }
 
-    const token = jwt.sign(
-        {
-            userId: user.id,
-            username: user.username,
-            collection_name: user.collection_name,
-            email: user.email
-        },
-        secret,
-        { expiresIn: '1h' }
-    );
+    // Access Token (short-lived)
+    const accessTokenPayload = { userId: user.id, username: user.username, collection_name: user.collection_name, email: user.email };
+    const accessToken = jwt.sign(accessTokenPayload, accessSecret, { expiresIn: '15m' });
+
+    // Refresh Token (long-lived, random string, store hashed version)
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+
+    // Hash the refresh token before storing
+    const hashedRefreshToken = await hashData(refreshToken);
+
+    // Store the hashed refresh token in the database
+    await db.insert(refreshTokensTable).values({
+        token: hashedRefreshToken,
+        user_id: user.id,
+        expiresAt: refreshTokenExpiry,
+    });
+
+    const token = {
+        accessToken,
+        refreshToken
+    };
 
     return ApiResponse.ok(res, { token }, "Login successful");
 });

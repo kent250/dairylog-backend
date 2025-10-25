@@ -136,7 +136,7 @@ router.post("/register", registerNewCollectionUser);
  * /auth/login:
  *   post:
  *     summary: Log in a dairy collection user
- *     description: Authenticates dairy user with username and password and returns a JWT token if valid.
+ *     description: Authenticates a dairy collection user with username and password, and returns access and refresh tokens if valid.
  *     tags:
  *       - Authentication
  *     requestBody:
@@ -171,8 +171,14 @@ router.post("/register", registerNewCollectionUser);
  *                   type: object
  *                   properties:
  *                     token:
- *                       type: string
- *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                         refreshToken:
+ *                           type: string
+ *                           example: 6538478c765993d9a22R5cCI6IkpXVCJ9...
  *                 message:
  *                   type: string
  *                   example: Login successful
@@ -182,7 +188,7 @@ router.post("/register", registerNewCollectionUser);
  *                     timestamp:
  *                       type: string
  *                       format: date-time
- *                       example: 2025-10-24T23:59:54.073Z
+ *                       example: 2025-10-25T08:12:29.073Z
  *       400:
  *         description: Missing username or password
  *         content:
