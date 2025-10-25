@@ -5,7 +5,8 @@ type AsyncRequestHandler = (
     req: Request,
     res: Response,
     next: NextFunction
-) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+) => Promise<any>;
 
 /**
  * Wraps async route handlers to automatically catch errors
