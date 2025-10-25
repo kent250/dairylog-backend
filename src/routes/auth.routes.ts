@@ -228,7 +228,6 @@ router.post("/register", registerNewCollectionUser);
  *                       type: integer
  *                       example: 401
  */
-
 router.post("/login", login);
 
 export default router;
