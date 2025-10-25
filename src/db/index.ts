@@ -17,8 +17,8 @@ const pool = new Pool({
   connectionString: config.database.url,
   ssl:
     config.environment === "production"
-      ? { rejectUnauthorized: true }
-      : { rejectUnauthorized: false },
+      ? { rejectUnauthorized: false }
+      : false,
   max: isSeeding || isMigrating ? 1 : 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,

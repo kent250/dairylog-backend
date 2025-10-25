@@ -15,6 +15,8 @@ const envSchema = z.object({
     CORS_ORIGINS_STAGING: z.string().transform(val => val.split(',')),
     CORS_ORIGINS_DEVELOPMENT: z.string().transform(val => val.split(',')),
     CORS_ORIGINS_LOCAL: z.string().transform(val => val.split(',')),
+    JWT_SECRET: z.string(),
+    JWT_EXPIRES_IN: z.string()
 });
 
 // 2. Load the correct .env file (simplified)
@@ -34,6 +36,10 @@ export const env = parsedEnv.data;
 export const config = {
     port: env.SERVER_PORT,
     environment: env.NODE_ENV,
+    JWT_SECRET: env.JWT_SECRET,
+    JWT_EXPIRES_IN: env.JWT_EXPIRES_IN,
+    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+
     database: {
         url: env.DATABASE_URL,
     },

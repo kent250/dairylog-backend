@@ -34,40 +34,43 @@ export const AUTH_ERRORS = {
  * Validation Errors (400, 404, 409, 422)
  */
 export const VALIDATION_ERRORS = {
-    VALIDATION_FAILED: {
-        code: 'VALIDATION_FAILED',
-        message: 'Input validation failed.',
-        httpStatus: 422,
-    },
-    MISSING_FIELD: {
-        code: 'MISSING_FIELD',
-        message: 'A required field is missing.',
+    // Client errors (4xx)
+    VALIDATION_ERROR: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed.',
         httpStatus: 400,
     },
-    INVALID_FORMAT: {
-        code: 'INVALID_FORMAT',
-        message: 'Field format is invalid.',
-        httpStatus: 400,
+    RESOURCE_CONFLICT: {
+        code: 'RESOURCE_CONFLICT',
+        message: 'Resource already exists.',
+        httpStatus: 409,
     },
     NOT_FOUND: {
         code: 'NOT_FOUND',
         message: 'Requested resource not found.',
         httpStatus: 404,
     },
-    EMAIL_ALREADY_EXISTS: {
-        code: 'EMAIL_ALREADY_EXISTS',
-        message: 'Email already exists.',
-        httpStatus: 409,
+    UNAUTHORIZED: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required.',
+        httpStatus: 401,
     },
-    VALUE_TOO_LONG: {
-        code: 'VALUE_TOO_LONG',
-        message: 'Input value is too long.',
-        httpStatus: 400,
+    FORBIDDEN: {
+        code: 'FORBIDDEN',
+        message: 'Insufficient permissions.',
+        httpStatus: 403,
     },
-    VALUE_TOO_SHORT: {
-        code: 'VALUE_TOO_SHORT',
-        message: 'Input value is too short.',
-        httpStatus: 400,
+
+    // Server errors (5xx)
+    INTERNAL_ERROR: {
+        code: 'INTERNAL_ERROR',
+        message: 'Internal server error.',
+        httpStatus: 500,
+    },
+    DATABASE_ERROR: {
+        code: 'DATABASE_ERROR',
+        message: 'Database operation failed.',
+        httpStatus: 500,
     },
 } as const satisfies Record<string, ErrorDefinition>;
 
