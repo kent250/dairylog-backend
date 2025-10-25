@@ -9,7 +9,7 @@ router.use("/auth", authRoutes);
 
 router.use('/doc', swaggerUi.serve, swaggerUi.setup(specs));
 
-router.use("/users", authenticateToken, userRoutes);
+router.use("/user", authenticateToken, userRoutes);
 
 
 

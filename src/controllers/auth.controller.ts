@@ -140,7 +140,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
     // Access Token (short-lived)
     const accessTokenPayload = { userId: user.id, username: user.username, collection_name: user.collection_name, email: user.email };
-    const accessToken = jwt.sign(accessTokenPayload, accessSecret, { expiresIn: '15m' });
+    const accessToken = jwt.sign(accessTokenPayload, accessSecret, { expiresIn: '1m' });
 
     // Refresh Token (long-lived, random string, store hashed version)
     const refreshToken = crypto.randomBytes(64).toString('hex');
