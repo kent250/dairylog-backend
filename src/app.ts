@@ -13,7 +13,6 @@ app.use(cors(corsOptions));
 app.use(helmet());
 
 
-
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'healthy',
@@ -24,14 +23,9 @@ app.get('/health', (req, res) => {
 });
 
 
-app.get("/", (_req, res) => {
-    const now = new Date();
-    res.json({
-        status: "ok",
-        currentTime: now.toISOString(),
-    });
+app.get('/', (req, res) => {
+    res.send('Hello, JavaScript Express Server!');
 });
-
 
 
 // Routes

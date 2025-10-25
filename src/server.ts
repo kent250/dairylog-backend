@@ -13,7 +13,7 @@ if (!PORT) {
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running in ${(config.environment ?? 'development').toUpperCase()} mode`);
-    console.log(`🌐 URL: ${config.api.baseUrl}`);
-    console.log(`📡 Port: ${PORT}`);
-    console.log(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`);
+    // console.log(`🌐 URL: ${config.api.baseUrl}`);
+    // console.log(`📡 Port: ${PORT}`);
+    // console.log(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`);
 });
