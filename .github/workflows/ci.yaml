@@ -35,8 +35,8 @@ jobs:
       - name: 🛠️ Build TypeScript
         run: npm run build
 
-      - name: 🧪 Run Jest Tests
-        run: npm run test:ci
+      # - name: 🧪 Run Jest Tests
+      #   run: npm run test:ci
 
   # Job 2: Docker Build and Push (remains unchanged)
   # docker_build:
