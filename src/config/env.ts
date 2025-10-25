@@ -5,6 +5,22 @@ import { z } from 'zod';
 import { AppError } from "../utils/error-utils/AppError.js";
 import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
 
+
+// 1. Load .env file ONLY in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+    const envPath = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`);
+    const result = dotenv.config({ path: envPath });
+
+    if (result.error) {
+        console.warn(`Warning: Could not load ${envPath}`, result.error.message);
+    } else {
+        console.log(`✓ Loaded environment from ${envPath}`);
+    }
+} else {
+    console.log('✓ Running in production - using platform environment variables');
+}
+
+
 // 1. Define the environment schema
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
@@ -24,9 +40,10 @@ const envSchema = z.object({
     BCRYPT_SALT_ROUNDS: z.coerce.number().min(1).max(15).default(10),
 });
 
-// 2. Load the correct .env file (simplified)
-const envPath = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`);
-dotenv.config({ path: envPath });
+// // 2. Load the correct .env file (simplified)
+// const envPath = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`);
+// dotenv.config({ path: envPath });
+
 
 const parsedEnv = envSchema.safeParse(process.env);
 
