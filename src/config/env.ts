@@ -54,6 +54,28 @@ if (!parsedEnv.success) {
 // Export the validated and typed environment variables
 export const env = parsedEnv.data;
 
+
+const getCorsOrigins = (): string[] => {
+    const { NODE_ENV, CORS_ORIGINS_PRODUCTION, CORS_ORIGINS_STAGING, CORS_ORIGINS_DEVELOPMENT, CORS_ORIGINS_LOCAL } = env;
+
+    switch (NODE_ENV) {
+        case 'production':
+            if (CORS_ORIGINS_PRODUCTION.length === 0) {
+                console.warn('⚠️  CORS_ORIGINS_PRODUCTION is empty - this may block requests');
+            }
+            return CORS_ORIGINS_PRODUCTION;
+
+        case 'staging':
+            return CORS_ORIGINS_STAGING.length > 0 ? CORS_ORIGINS_STAGING : CORS_ORIGINS_PRODUCTION;
+
+        case 'development':
+            return CORS_ORIGINS_DEVELOPMENT.length > 0 ? CORS_ORIGINS_DEVELOPMENT : CORS_ORIGINS_LOCAL;
+
+        default:
+            return CORS_ORIGINS_LOCAL;
+    }
+};
+
 // 4. Create the final config object using the validated env
 export const config = {
     port: env.SERVER_PORT,
@@ -69,12 +91,5 @@ export const config = {
     api: {
         baseUrl: env.API_BASE_URL,
     },
-    corsOrigins: ((): string[] => {
-        switch (env.NODE_ENV) {
-            case 'production': return env.CORS_ORIGINS_PRODUCTION;
-            case 'staging': return env.CORS_ORIGINS_STAGING;
-            case 'development': return env.CORS_ORIGINS_DEVELOPMENT;
-            default: return env.CORS_ORIGINS_LOCAL;
-        }
-    })()
+    corsOrigins: getCorsOrigins()
 };
