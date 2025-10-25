@@ -24,7 +24,7 @@ if (process.env.NODE_ENV !== 'production') {
 // 1. Define the environment schema
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-    SERVER_PORT: z.coerce.number().default(3000),
+    // SERVER_PORT: z.coerce.number().default(3000),
     DATABASE_URL: z.url(),
     API_BASE_URL: z.url(),
     CORS_ORIGINS_PRODUCTION: z.string().optional().transform(val => val?.split(',') || []),
@@ -39,9 +39,6 @@ const envSchema = z.object({
     BCRYPT_SALT_ROUNDS: z.coerce.number().min(1).max(15).default(10),
 });
 
-// // 2. Load the correct .env file (simplified)
-// const envPath = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`);
-// dotenv.config({ path: envPath });
 
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -77,7 +74,7 @@ const getCorsOrigins = (): string[] => {
 
 // 4. Create the final config object using the validated env
 export const config = {
-    port: env.SERVER_PORT,
+    // port: env.SERVER_PORT,
     environment: env.NODE_ENV,
     JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
     JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
