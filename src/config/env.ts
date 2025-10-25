@@ -27,11 +27,10 @@ const envSchema = z.object({
     SERVER_PORT: z.coerce.number().default(3000),
     DATABASE_URL: z.url(),
     API_BASE_URL: z.url(),
-    CORS_ORIGINS_PRODUCTION: z.string().transform(val => val.split(',')),
-    CORS_ORIGINS_STAGING: z.string().transform(val => val.split(',')),
-    CORS_ORIGINS_DEVELOPMENT: z.string().transform(val => val.split(',')),
-    CORS_ORIGINS_LOCAL: z.string().transform(val => val.split(',')),
-
+    CORS_ORIGINS_PRODUCTION: z.string().optional().transform(val => val?.split(',') || []),
+    CORS_ORIGINS_STAGING: z.string().optional().transform(val => val?.split(',') || []),
+    CORS_ORIGINS_DEVELOPMENT: z.string().optional().transform(val => val?.split(',') || []),
+    CORS_ORIGINS_LOCAL: z.string().optional().transform(val => val?.split(',') || []),
     JWT_ACCESS_SECRET: z.string(),
     JWT_REFRESH_SECRET: z.string(),
 
