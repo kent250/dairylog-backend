@@ -12,17 +12,17 @@ app.use(express.json());
 app.use(cors(corsOptions));
 app.use(helmet());
 
-// Routes
-app.use("/api", routes);
 
-// Healthcheck
-app.get("/health", (_req, res) => {
-    const now = new Date();
-    res.json({
-        status: "ok",
-        currentTime: now.toISOString(),
+
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV,
     });
 });
+
 
 app.get("/", (_req, res) => {
     const now = new Date();
@@ -31,6 +31,11 @@ app.get("/", (_req, res) => {
         currentTime: now.toISOString(),
     });
 });
+
+
+
+// Routes
+app.use("/api", routes);
 
 
 //GLobal Error Handler
