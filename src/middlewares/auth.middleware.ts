@@ -5,7 +5,7 @@ import { AppError } from '../utils/error-utils/AppError.js';
 import { ERROR_CODES } from '../utils/error-utils/errorCodes.js';
 import { config } from '../config/env';
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
     user?: {
         userId: number;
         username: string;
@@ -25,7 +25,7 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     }
 
     // 3. Verify the token
-    const secret = config.JWT_SECRET;
+    const secret = config.JWT_ACCESS_SECRET;
     if (!secret) {
         throw new AppError(ERROR_CODES.INTERNAL_ERROR, 'Internal server error - configuration missing');
     }
