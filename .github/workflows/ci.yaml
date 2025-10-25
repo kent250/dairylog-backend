@@ -65,7 +65,7 @@ jobs:
         run: npm ci
 
       - name: 📜 Apply Drizzle Migrations
-        run: npx drizzle-kit migrate:pg
+        run: npx drizzle-kit migrate
 
   # Job 2: Docker Build and Push (remains unchanged)
   # docker_build:
