@@ -38,6 +38,35 @@ jobs:
       # - name: 🧪 Run Jest Tests
       #   run: npm run test:ci
 
+
+  # Job 2: Run Database Migrations - Runs ONLY on push to main/master
+  migrate_database:
+    name: Apply Database Migrations
+    runs-on: ubuntu-latest
+    needs: verify # Run only after verification passes
+    if: github.event_name == 'push'
+    timeout-minutes: 5
+
+    # Environment variables needed for Drizzle Kit
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }} # Load DB connection string from GitHub Secrets
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: 📜 Apply Drizzle Migrations
+        run: npx drizzle-kit migrate:pg
+
   # Job 2: Docker Build and Push (remains unchanged)
   # docker_build:
   #   name: Docker Build & Push
