@@ -131,8 +131,8 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
         throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Invalid credentials');
     }
 
-    const accessSecret = config.JWT_ACCESS_SECRET;
-    const refreshSecret = config.JWT_REFRESH_SECRET;
+    const accessSecret = config.jwt.JWT_ACCESS_SECRET;
+    const refreshSecret = config.jwt.JWT_REFRESH_SECRET;
 
     if (!accessSecret || !refreshSecret) {
         throw new AppError(ERROR_CODES.INTERNAL_ERROR, 'JWT configuration missing');

@@ -9,7 +9,7 @@ import { config } from '../config/env.js';
  */
 export async function hashData(data: string): Promise<string> {
 
-    const saltRounds = config.BCRYPT_SALT_ROUNDS;
+    const saltRounds = config.bcryptSaltRounds;
 
     if (typeof saltRounds !== 'number' || saltRounds < 1) {
         return bcrypt.hash(data, 10);

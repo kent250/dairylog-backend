@@ -2,90 +2,124 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { z } from 'zod';
 
-import { AppError } from "../utils/error-utils/AppError.js";
-import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
+import { AppError } from "../utils/error-utils/AppError";
+import { ERROR_CODES } from "../utils/error-utils/errorCodes";
 
+/**
+ * Loads environment variables from a .env file based on NODE_ENV.
+ * Skips loading in 'production' as variables are expected from the platform.
+ */
+function loadEnvFile() {
+    const nodeEnv = process.env.NODE_ENV || 'development';
 
-// 1. Load .env file ONLY in non-production environments
-if (process.env.NODE_ENV !== 'production') {
-    const envPath = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`);
+    if (nodeEnv === 'production') {
+        console.log('✓ Running in production - using platform environment variables.');
+        return;
+    }
+
+    // Construct the path: .env.development, .env.staging, etc.
+    const envFileName = `.env.${nodeEnv}`;
+    const envPath = path.resolve(process.cwd(), envFileName);
     const result = dotenv.config({ path: envPath });
 
     if (result.error) {
-        console.warn(`Warning: Could not load ${envPath}`, result.error.message);
+        console.warn(`⚠️ Warning: Could not load environment file from ${envPath}. Falling back to platform variables or defaults.`);
     } else {
-        console.log(`✓ Loaded environment from ${envPath}`);
+        console.log(`✓ Loaded environment variables from ${envPath}`);
     }
-} else {
-    console.log('✓ Running in production - using platform environment variables');
 }
 
+loadEnvFile();
 
-// 1. Define the environment schema
+/**
+ * Defines the expected shape and types of environment variables using Zod.
+ * Provides default values for non-critical variables.
+ */
 const envSchema = z.object({
+    // --- Application Environment ---
     NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-    // SERVER_PORT: z.coerce.number().default(3000),
-    DATABASE_URL: z.url(),
-    API_BASE_URL: z.url(),
-    CORS_ORIGINS_PRODUCTION: z.string().optional().transform(val => val?.split(',') || []),
-    CORS_ORIGINS_STAGING: z.string().optional().transform(val => val?.split(',') || []),
-    CORS_ORIGINS_DEVELOPMENT: z.string().optional().transform(val => val?.split(',') || []),
-    CORS_ORIGINS_LOCAL: z.string().optional().transform(val => val?.split(',') || []),
-    JWT_ACCESS_SECRET: z.string(),
-    JWT_REFRESH_SECRET: z.string(),
+    SERVER_PORT: z.coerce.number().int().positive().default(3000),
+    API_BASE_URL: z.string().url().default('http://localhost:3000'),
 
+    // --- Database ---
+    DATABASE_URL: z.string().url('Invalid DATABASE_URL format'),
 
-    // Added: For password and token hashing
-    BCRYPT_SALT_ROUNDS: z.coerce.number().min(1).max(15).default(10),
+    // --- Security ---
+    JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters long'),
+    JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters long'),
+    BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10), // Min 10 rounds recommended
+
+    // --- CORS ---
+    // Transforms comma-separated strings into arrays, handles undefined/empty strings
+    CORS_ORIGINS_PRODUCTION: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
+    CORS_ORIGINS_STAGING: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
+    CORS_ORIGINS_DEVELOPMENT: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
+    CORS_ORIGINS_LOCAL: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : ['http://localhost:3000', 'http://127.0.0.1:3000']),
 });
 
+// Validate process.env against the schema
+const parsedEnvResult = envSchema.safeParse(process.env);
 
-
-const parsedEnv = envSchema.safeParse(process.env);
-
-if (!parsedEnv.success) {
-    throw new AppError(ERROR_CODES.INVALID_ENV_VARIABLE);
+if (!parsedEnvResult.success) {
+    throw new AppError(
+        ERROR_CODES.INVALID_ENV_VARIABLE,
+        'Environment variable validation failed. Check console for details.'
+    );
 }
 
 // Export the validated and typed environment variables
-export const env = parsedEnv.data;
+export const env = parsedEnvResult.data;
 
+/**
+ * Determines the appropriate CORS origins based on the current NODE_ENV.
+ * Implements fallback logic (e.g., Staging uses Production if Staging-specific origins aren't set).
+ */
+function determineCorsOrigins(): string[] {
+    const {
+        NODE_ENV,
+        CORS_ORIGINS_PRODUCTION,
+        CORS_ORIGINS_STAGING,
+        CORS_ORIGINS_DEVELOPMENT,
+        CORS_ORIGINS_LOCAL
+    } = env;
 
-const getCorsOrigins = (): string[] => {
-    const { NODE_ENV, CORS_ORIGINS_PRODUCTION, CORS_ORIGINS_STAGING, CORS_ORIGINS_DEVELOPMENT, CORS_ORIGINS_LOCAL } = env;
+    // Define origins map for clarity
+    const originsMap: Record<typeof NODE_ENV, string[]> = {
+        production: CORS_ORIGINS_PRODUCTION,
+        staging: CORS_ORIGINS_STAGING.length > 0 ? CORS_ORIGINS_STAGING : CORS_ORIGINS_PRODUCTION,
+        development: CORS_ORIGINS_DEVELOPMENT.length > 0 ? CORS_ORIGINS_DEVELOPMENT : CORS_ORIGINS_LOCAL,
+    };
 
-    switch (NODE_ENV) {
-        case 'production':
-            if (CORS_ORIGINS_PRODUCTION.length === 0) {
-                console.warn('⚠️  CORS_ORIGINS_PRODUCTION is empty - this may block requests');
-            }
-            return CORS_ORIGINS_PRODUCTION;
+    const selectedOrigins = originsMap[NODE_ENV];
 
-        case 'staging':
-            return CORS_ORIGINS_STAGING.length > 0 ? CORS_ORIGINS_STAGING : CORS_ORIGINS_PRODUCTION;
-
-        case 'development':
-            return CORS_ORIGINS_DEVELOPMENT.length > 0 ? CORS_ORIGINS_DEVELOPMENT : CORS_ORIGINS_LOCAL;
-
-        default:
-            return CORS_ORIGINS_LOCAL;
+    if (NODE_ENV === 'production' && selectedOrigins.length === 0) {
+        console.warn('⚠️ CORS_ORIGINS_PRODUCTION is empty or not set. This may block all cross-origin requests in production!');
     }
-};
 
-// 4. Create the final config object using the validated env
+    return selectedOrigins;
+}
+
+/**
+ * Consolidated configuration object derived from validated environment variables.
+ * Provides a structured way to access configuration throughout the application.
+ */
 export const config = {
-    // port: env.SERVER_PORT,
+    // --- Server ---
+    port: env.SERVER_PORT,
     environment: env.NODE_ENV,
-    JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
-    JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
+    apiBaseUrl: env.API_BASE_URL,
 
-    BCRYPT_SALT_ROUNDS: env.BCRYPT_SALT_ROUNDS,
+    jwt: {
+        JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
+        JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
+    },
+    bcryptSaltRounds: env.BCRYPT_SALT_ROUNDS,
 
     database: {
         url: env.DATABASE_URL,
     },
-    api: {
-        baseUrl: env.API_BASE_URL,
-    },
-    corsOrigins: getCorsOrigins()
-};
+
+    corsOrigins: determineCorsOrigins(),
+} as const;
+
+console.log(`✓ CORS Origins for ${config.environment}: ${config.corsOrigins.join(', ') || '[]'}`);

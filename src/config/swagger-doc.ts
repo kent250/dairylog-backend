@@ -13,10 +13,13 @@ const options: swaggerJsdoc.Options = {
         },
         servers: [
             {
-                url: `http://localhost/api`,
-                // url: `http://localhost:${config.port}/api`,
-                description: 'Development server',
+                url: `https://sea-lion-app-p7ri7.ondigitalocean.app/api`,
+                description: 'Production server',
             },
+            {
+                url: `http://localhost:${config.port}/api`,
+                description: 'Development server',
+            }
         ],
         components: {
             securitySchemes: {
