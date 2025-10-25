@@ -5,7 +5,7 @@ type AsyncRequestHandler = (
     req: Request,
     res: Response,
     next: NextFunction
-) => Promise<any>;
+) => Promise<void>;
 
 /**
  * Wraps async route handlers to automatically catch errors
