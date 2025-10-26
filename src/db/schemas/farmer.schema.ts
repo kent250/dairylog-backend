@@ -4,7 +4,7 @@ import {
     createSelectSchema,
 } from 'drizzle-zod';
 import { relations } from 'drizzle-orm';
-import type { z } from 'zod';
+import { type z } from 'zod';
 
 import { users } from './user.schema.js';
 
@@ -77,9 +77,6 @@ export const insertFarmerSchema = createInsertSchema(farmersTable, {
             .min(2, { message: 'Sector must be at least 2 characters long' })
             .max(100, { message: 'Village cannot exceed 100 characters' })
 }).omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
     collection_center_id: true,
 });
 
