@@ -58,10 +58,12 @@ export class AppError extends Error {
     additionalContext?: string,
     details?: unknown
   ) {
-    // Combine base message with optional context
+
     const fullMessage = additionalContext
-      ? `${errorDefinition.message} ${additionalContext}`
+      ? additionalContext
       : errorDefinition.message;
+
+
 
     super(fullMessage);
 
