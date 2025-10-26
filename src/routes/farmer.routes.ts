@@ -1,6 +1,10 @@
 import { Router } from "express";
+import {
+    createFarmer,
+    getAllFarmersForUser,
+    findFarmerByPhoneForUser
+} from '../controllers/farmer.controller.js';
 
-import { createFarmer, getAllFarmersForUser } from '../controllers/farmer.controller.js';
 
 const router = Router();
 
@@ -294,6 +298,126 @@ router.post('/', createFarmer);
  *         description: Unauthorized – missing or invalid token.
  */
 router.get('/', getAllFarmersForUser);
+
+
+
+/**
+ * @swagger
+ * /farmer/lookup:
+ *   get:
+ *     summary: Find a farmer by phone number
+ *     description: >
+ *       Retrieves a single farmer record that matches the provided phone number,
+ *       scoped to the authenticated collection center.  
+ *       Requires a valid JWT access token.
+ *     tags:
+ *       - Farmers
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "0788123456"
+ *         description: The farmer's phone number to look up.
+ *     responses:
+ *       200:
+ *         description: Farmer found successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     farmer_name:
+ *                       type: string
+ *                       example: Jean Bosco Nkurunziza
+ *                     phone_number:
+ *                       type: string
+ *                       example: "0788123456"
+ *                     sector:
+ *                       type: string
+ *                       example: Gisozi
+ *                     cell:
+ *                       type: string
+ *                       example: Musezero
+ *                     village:
+ *                       type: string
+ *                       example: Kamasagara
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-10-26T15:51:40.422Z"
+ *                 message:
+ *                   type: string
+ *                   example: Farmer found.
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-10-26T18:17:54.713Z"
+ *
+ *       400:
+ *         description: Invalid or missing query parameter.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "VALIDATION_ERROR"
+ *                 message: "Invalid query parameters."
+ *                 timestamp: "2025-10-26T18:25:58.607Z"
+ *                 statusCode: 400
+ *
+ *       401:
+ *         description: Unauthorized — missing or invalid authentication token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "UNAUTHORIZED"
+ *                 message: "Unauthorized: Access token is missing"
+ *                 timestamp: "2025-10-26T18:26:19.337Z"
+ *                 statusCode: 401
+ *
+ *       404:
+ *         description: Farmer not found for provided phone number.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "NOT_FOUND"
+ *                 message: "Farmer with phone number 0783741533 not found."
+ *                 timestamp: "2025-10-26T18:27:40.445Z"
+ *                 statusCode: 404
+ *
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "INTERNAL_SERVER_ERROR"
+ *                 message: "Something went wrong."
+ *                 timestamp: "2025-10-26T18:30:00.000Z"
+ *                 statusCode: 500
+ */
+router.get('/lookup', findFarmerByPhoneForUser);
 
 
 

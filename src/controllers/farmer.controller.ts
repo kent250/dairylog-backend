@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { z } from 'zod';
-import { eq, or, like, ilike, asc, desc, count } from 'drizzle-orm';
+import { eq, or, like, ilike, asc, desc, count, and } from 'drizzle-orm';
 
 import { db } from '../db/index.js';
 import { type NewFarmer, insertFarmerSchema, farmersTable } from '../db/schemas/farmer.schema.js';
@@ -11,7 +11,6 @@ import { ApiResponse } from '../utils/api-response.js';
 import { asyncHandler } from '../utils/syncHandler.js';
 
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
-
 
 
 
@@ -31,6 +30,19 @@ const listFarmersQuerySchema = z.object({
     sortBy: z.enum(['name', 'createdAt', 'phoneNumber']).optional().default('createdAt'),
     sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
+
+
+
+/**
+ * Zod schema for validating query parameters when looking up a farmer by phone number.
+ *
+ * @property {string} phone - Required phone number of the farmer to search for. Must be at least 1 character long.
+ * 
+ */
+const lookupQuerySchema = z.object({
+    phone: z.string().min(1, { message: 'Phone number query parameter is required.' }),
+});
+
 
 
 
@@ -234,4 +246,69 @@ export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedReques
         'Farmers retrieved successfully.'
     );
 
+});
+
+
+
+
+/**
+ * Retrieves a farmer record by phone number for the authenticated collection center.
+ *
+ * This function verifies the logged-in user's ID, validates the phone number provided
+ * as a query parameter, and searches the database for a matching farmer associated
+ * with that collection center.
+ *
+ * @async
+ * @function findFarmerByPhoneForUser
+ * @param {AuthenticatedRequest} req - Express request object with authenticated user data.
+ * @param {Response} res - Express response object.
+ * @throws {AppError} 401 - If no user ID is found in the JWT payload.
+ * @throws {AppError} 400 - If query parameters are invalid.
+ * @throws {AppError} 404 - If no farmer is found with the provided phone number.
+ * @returns {Promise<void>} Sends a JSON response with farmer details on success.
+ *
+ * @example
+ * GET /api/farmer/lookup?phone=0788123456
+ *
+ */
+export const findFarmerByPhoneForUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+
+    // 1. Get logged-in user ID from middleware
+    const loggedInUserId = req.user?.userId;
+    if (!loggedInUserId) {
+        throw new AppError(ERROR_CODES.UNAUTHORIZED, 'User ID not found in token payload.');
+    }
+
+    // Validate query parameters
+    const queryValidation = lookupQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid query parameters.');
+    }
+
+    const { phone } = queryValidation.data;
+
+    // Query for the farmer matching the phone number AND the logged-in user's ID
+    const foundFarmers = await db.select({
+        id: farmersTable.id,
+        farmer_name: farmersTable.farmer_name,
+        phone_number: farmersTable.phone_number,
+        sector: farmersTable.sector,
+        cell: farmersTable.cell,
+        village: farmersTable.village,
+        createdAt: farmersTable.createdAt,
+    })
+        .from(farmersTable)
+        .where(
+            and(
+                eq(farmersTable.collection_center_id, loggedInUserId),
+                eq(farmersTable.phone_number, phone)
+            )
+        )
+        .limit(1);
+
+    if (foundFarmers.length === 0) {
+        throw new AppError(ERROR_CODES.NOT_FOUND, `Farmer with phone number ${phone} not found.`);
+    }
+
+    return ApiResponse.ok(res, foundFarmers[0], 'Farmer found.');
 });
