@@ -24,7 +24,11 @@ app.get('/health', (req, res) => {
 
 
 app.get('/', (req, res) => {
-    res.send('Hello, JavaScript Express Server!');
+    res.send(`
+    <h1>Welcome to the DairyLog Backend API!</h1>
+    <p>This API provides endpoints for managing users, farmers, and milk collection records for the DairyLog application.</p>
+    <p>For detailed information on available routes and how to use them, please see the <a href="/api/doc">API Documentation</a>.</p>
+  `);
 });
 
 
