@@ -1,10 +1,8 @@
 import { Router } from "express";
 
-import { createFarmer } from '../controllers/farmer.controller.js';
+import { createFarmer, getAllFarmersForUser } from '../controllers/farmer.controller.js';
 
 const router = Router();
-
-
 
 /**
  * @swagger
@@ -154,6 +152,149 @@ const router = Router();
  *                       example: 2025-10-25T10:33:30.574Z
  */
 router.post('/', createFarmer);
+
+/**
+ * @swagger
+ * /farmer:
+ *   get:
+ *     summary: Returns a paginated list of farmers belonging to the authenticated collection center. You can filter results by name or phone number, and control sorting and pagination through query parameters.
+ *     description: >
+ *       Retrieves a paginated list of farmers that belong to the currently authenticated collection center user.  
+ *       Supports searching, pagination, and sorting by name, phone number, or creation date.
+ *     tags:
+ *       - Farmers
+ *     security:
+ *       - bearerAuth: []   # Protected route
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Filter farmers by name or phone number (case-insensitive).
+ *         example: John
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: The page number to retrieve.
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *         description: Number of farmers to return per page.
+ *         example: 2
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, createdAt, phoneNumber]
+ *           default: createdAt
+ *         description: Sort results by a specific field.
+ *         example: name
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order direction.
+ *         example: asc
+ *     responses:
+ *       200:
+ *         description: Farmers retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 5
+ *                       farmer_name:
+ *                         type: string
+ *                         example: John Doe
+ *                       phone_number:
+ *                         type: string
+ *                         example: 0789001122
+ *                       sector:
+ *                         type: string
+ *                         example: Gitega
+ *                       cell:
+ *                         type: string
+ *                         example: Nyamirambo
+ *                       village:
+ *                         type: string
+ *                         example: Kigali
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-10-26T16:23:59.823Z
+ *                 message:
+ *                   type: string
+ *                   example: Farmers retrieved successfully.
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       example: 2025-10-26T17:21:10.288Z
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 3
+ *                         limit:
+ *                           type: integer
+ *                           example: 2
+ *                         total:
+ *                           type: integer
+ *                           example: 5
+ *                         hasNext:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPrev:
+ *                           type: boolean
+ *                           example: false
+ *       400:
+ *         description: Invalid query parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: VALIDATION_ERROR
+ *                     message:
+ *                       type: string
+ *                       example: Invalid query parameters.
+ *       401:
+ *         description: Unauthorized – missing or invalid token.
+ */
+router.get('/', getAllFarmersForUser);
+
 
 
 export default router;

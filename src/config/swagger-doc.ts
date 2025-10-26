@@ -10,6 +10,10 @@ const options: swaggerJsdoc.Options = {
             version: '1.0.0',
             description:
                 'Express.js + TypeScript backend server for the DairyLog app. Handles JWT authentication, farmer management, and milk collection data using driizzle and PostgreSQL.',
+            // contact: {
+            //     name: "DairyLog Support",
+            //     email: "@irumva.codes"
+            // }
         },
         servers: [
             {
@@ -21,6 +25,8 @@ const options: swaggerJsdoc.Options = {
                 description: 'Production server',
             }
         ],
+        schemes: ['http', 'https'],
+        produces: ['application/json'],
         components: {
             securitySchemes: {
                 bearerAuth: {
@@ -32,6 +38,16 @@ const options: swaggerJsdoc.Options = {
         },
     },
     apis: ['./src/routes/*.ts'],
+    tags: [
+        {
+            name: 'Authentication',
+            description: 'Endpoints for user registration, login, and JWT token management.',
+        },
+        {
+            name: 'Farmers',
+            description: 'Endpoints for managing farmers and their data.',
+        }
+    ],
 };
 
 export const specs = swaggerJsdoc(options);

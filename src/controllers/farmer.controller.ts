@@ -1,5 +1,6 @@
 import type { Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { eq, or, like, ilike, asc, desc, count } from 'drizzle-orm';
 
 import { db } from '../db/index.js';
 import { type NewFarmer, insertFarmerSchema, farmersTable } from '../db/schemas/farmer.schema.js';
@@ -10,6 +11,26 @@ import { ApiResponse } from '../utils/api-response.js';
 import { asyncHandler } from '../utils/syncHandler.js';
 
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
+
+
+
+
+/**
+ * Zod schema for validating query parameters when listing farmers.
+ *
+ * @property {string} [search] - Optional search term to filter farmers by name or phone number.
+ * @property {number} [page=1] - Page number (must be a positive integer).
+ * @property {number} [limit=10] - Number of farmers per page (maximum 100).
+ * @property {'name'|'createdAt'|'phoneNumber'} [sortBy='createdAt'] - Field to sort results by.
+ * @property {'asc'|'desc'} [sortOrder='desc'] - Sort order direction.
+ */
+const listFarmersQuerySchema = z.object({
+    search: z.string().optional(),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    sortBy: z.enum(['name', 'createdAt', 'phoneNumber']).optional().default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+});
 
 
 
@@ -57,7 +78,6 @@ import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
  * }
  */
 export const createFarmer = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-
     // 1. Get logged-in user ID from middleware
     const loggedInUserId = req.user?.userId;
     if (!loggedInUserId) {
@@ -117,4 +137,101 @@ export const createFarmer = asyncHandler(async (req: AuthenticatedRequest, res: 
     }
 
     return ApiResponse.created(res, newFarmers[0], 'Farmer created successfully.');
+});
+
+
+
+
+/**
+ * Retrieves a paginated list of farmers belonging to the authenticated collection center.
+ *
+ * The authenticated user's ID is extracted from the JWT token payload. The function supports:
+ * - Searching farmers by name or phone number (case-insensitive)
+ * - Pagination using `page` and `limit`
+ * - Sorting by name, creation date, or phone number
+ *
+ * Query parameters are validated using `listFarmersQuerySchema` (Zod).
+ *
+ * @param {AuthenticatedRequest} req - Express request with authenticated user info and optional query parameters.
+ * @param {Response} res - Express response object used to return the paginated list of farmers.
+ * @throws {AppError} Throws `UNAUTHORIZED` if `userId` is missing in the token.
+ * @throws {AppError} Throws `VALIDATION_ERROR` if query parameters fail validation.
+ * @returns {Promise<void>} Sends a paginated JSON response with farmers data and metadata.
+ */
+export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+
+    // 1. Get logged-in user ID from middleware
+    const loggedInUserId = req.user?.userId;
+    if (!loggedInUserId) {
+        throw new AppError(ERROR_CODES.UNAUTHORIZED, 'User ID not found in token payload.');
+    }
+
+    // 2. Validate query parameters
+    const queryValidation = listFarmersQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+        throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid query parameters.');
+    }
+
+    const { search, page, limit, sortBy, sortOrder } = queryValidation.data;
+
+    const offset = (page - 1) * limit;
+
+    // 3. Map sortBy to actual table columns safely
+    const sortColumn = {
+        name: farmersTable.farmer_name,
+        createdAt: farmersTable.createdAt,
+        phoneNumber: farmersTable.phone_number,
+    }[sortBy];
+
+    const sortDirection = sortOrder === 'asc' ? asc : desc;
+
+    // 3. Build the base query conditions
+    const conditions = [eq(farmersTable.collection_center_id, loggedInUserId)];
+    if (search) {
+        // Add search condition (case-insensitive)
+        const searchTerm = `%${search}%`;
+        conditions.push(
+            or(
+                ilike(farmersTable.farmer_name, searchTerm),
+                like(farmersTable.phone_number, searchTerm) // we used 'like' because phone format is strict (rw)
+            )! // Non-null assertion as 'or' can return undefined if array is empty, which isn't the case here that is why we added !
+        );
+    }
+
+    // 5. Fetch paginated farmers
+    const farmers = await db.select({
+        id: farmersTable.id,
+        farmer_name: farmersTable.farmer_name,
+        phone_number: farmersTable.phone_number,
+        sector: farmersTable.sector,
+        cell: farmersTable.cell,
+        village: farmersTable.village,
+        createdAt: farmersTable.createdAt,
+    })
+        .from(farmersTable)
+        .where(conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0])
+        .orderBy(sortDirection(sortColumn))
+        .limit(limit)
+        .offset(offset);
+
+    // 6. Fetch total count for pagination metadata
+    const totalResult = await db.select({ value: count() })
+        .from(farmersTable)
+        .where(conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0]);
+
+    const totalFarmers = totalResult[0]?.value ?? 0;
+    const totalPages = Math.ceil(totalFarmers / limit);
+
+
+    return ApiResponse.paginated(res,
+        farmers,
+        {
+            currentPage: page,
+            totalPages: totalPages,
+            limit: limit,
+            total: totalFarmers,
+        },
+        'Farmers retrieved successfully.'
+    );
+
 });
