@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { getProfile } from "../controllers/user.controller.js";
 const router = Router();
 
@@ -156,7 +155,7 @@ const router = Router();
  *                       format: date-time
  *                       example: 2025-10-25T10:33:30.574Z
  */
-router.get("/profile", authenticateToken, getProfile);
+router.get("/profile", getProfile);
 
 
 export default router;
