@@ -299,8 +299,6 @@ router.post('/', createFarmer);
  */
 router.get('/', getAllFarmersForUser);
 
-
-
 /**
  * @swagger
  * /farmer/lookup:

@@ -37,7 +37,6 @@ const options: swaggerJsdoc.Options = {
             },
         },
     },
-    apis: ['./src/routes/*.ts'],
     tags: [
         {
             name: 'Authentication',
@@ -46,8 +45,15 @@ const options: swaggerJsdoc.Options = {
         {
             name: 'Farmers',
             description: 'Endpoints for managing farmers and their data.',
-        }
+        },
+        {
+            name: 'Milk',
+            description: 'Endpoints for recording and retrieving milk collection data.',
+        },
+
     ],
+    apis: ['./src/routes/*.ts'],
+
 };
 
 export const specs = swaggerJsdoc(options);
