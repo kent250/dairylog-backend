@@ -1,5 +1,5 @@
 import * as userSchema from "./user.schema.js";
-// import * as postSchema from './post.schema.js'; // As you add more
+import * as farmerSchema from './farmer.schema.js';
 
 /**
  * This object is for your RUNTIME.
@@ -8,9 +8,9 @@ import * as userSchema from "./user.schema.js";
  */
 export const schema = {
   ...userSchema,
-  // ...postSchema,
+  ...farmerSchema,
 };
 
 // We also re-export the types for convenience
 export * from "./user.schema.js";
-// export * from './post.schema.js';
+export * from './farmer.schema.js';
