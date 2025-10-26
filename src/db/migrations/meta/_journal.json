@@ -15,6 +15,13 @@
       "when": 1761379070789,
       "tag": "0001_generate-refresh-tokens-schema-and-migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761489219299,
+      "tag": "0002_generate-farmer-schema-and-migrations",
+      "breakpoints": true
     }
   ]
 }
