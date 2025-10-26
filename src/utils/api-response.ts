@@ -102,7 +102,7 @@ export const ApiResponse = {
     res: Response,
     data: T[],
     pagination: {
-      page: number;
+      currentPage: number;
       limit: number;
       total: number;
       totalPages?: number;
@@ -119,8 +119,8 @@ export const ApiResponse = {
         pagination: {
           ...pagination,
           totalPages,
-          hasNext: pagination.page < totalPages,
-          hasPrev: pagination.page > 1,
+          hasNext: pagination.currentPage < totalPages,
+          hasPrev: pagination.currentPage > 1,
         },
       },
     });
