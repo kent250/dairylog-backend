@@ -8,6 +8,7 @@ import { relations } from 'drizzle-orm';
 import type { z } from 'zod';
 import { refreshTokensTable } from './refresh-token.schema.js';
 import { farmersTable } from './farmer.schema.js';
+import { milkRecordsTable } from './milk-record.schema.js';
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -101,4 +102,5 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export const usersRelations = relations(users, ({ many }) => ({
     refreshTokens: many(refreshTokensTable),
     registeredFarmers: many(farmersTable),
+    recordedMilkRecords: many(milkRecordsTable),
 }));

@@ -7,6 +7,7 @@ import { relations } from 'drizzle-orm';
 import { type z } from 'zod';
 
 import { users } from './user.schema.js';
+import { milkRecordsTable } from './milk-record.schema.js';
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -31,11 +32,12 @@ export const farmersTable = pgTable('farmers', {
 });
 
 
-export const farmersRelations = relations(farmersTable, ({ one }) => ({
+export const farmersRelations = relations(farmersTable, ({ one, many }) => ({
     collectionCenter: one(users, {
         fields: [farmersTable.collection_center_id],
         references: [users.id],
     }),
+    milkRecords: many(milkRecordsTable),
 }));
 
 // ------------------------------------------------------------------
