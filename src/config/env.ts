@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { AppError } from "../utils/error-utils/AppError.js";
 import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
+import { getFirstZodErrorMessage } from "../utils/error-utils/error-helpers.js";
 
 /**
  * Loads environment variables from a .env file based on NODE_ENV.
@@ -111,15 +112,8 @@ const envSchema = z.object({
 const parsedEnvResult = envSchema.safeParse(process.env);
 
 if (!parsedEnvResult.success) {
-  // 1. Get the first error issue from Zod's error array
-  const firstError = parsedEnvResult.error.issues[0];
-  const fieldName = firstError.path.join(".");
-  const errorMessage = firstError.message;
-
-  // 4. Create a clean, combined message
-  const fullErrorMessage = `${fieldName}: ${errorMessage}`;
-
-  throw new AppError(ERROR_CODES.INVALID_ENV_VARIABLE, fullErrorMessage);
+  const formattedFirstZodError = getFirstZodErrorMessage(parsedEnvResult.error);
+  throw new AppError(ERROR_CODES.INVALID_ENV_VARIABLE, formattedFirstZodError);
 }
 
 // Export the validated and typed environment variables

@@ -1,18 +1,21 @@
-import type { Response } from 'express';
-import { z } from 'zod';
-import { eq, or, like, ilike, asc, desc, count, and } from 'drizzle-orm';
+import type { Response } from "express";
+import { z } from "zod";
+import { eq, or, like, ilike, asc, desc, count, and } from "drizzle-orm";
 
-import { db } from '../db/index.js';
-import { type NewFarmer, insertFarmerSchema, farmersTable } from '../db/schemas/farmer.schema.js';
+import { db } from "../db/index.js";
+import {
+  type NewFarmer,
+  insertFarmerSchema,
+  farmersTable,
+} from "../db/schemas/farmer.schema.js";
 
-import { AppError } from '../utils/error-utils/AppError.js';
-import { ERROR_CODES } from '../utils/error-utils/errorCodes.js';
-import { ApiResponse } from '../utils/api-response.js';
-import { asyncHandler } from '../utils/syncHandler.js';
+import { AppError } from "../utils/error-utils/AppError.js";
+import { getFirstZodErrorMessage } from "../utils/error-utils/error-helpers.js";
+import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
+import { ApiResponse } from "../utils/api-response.js";
+import { asyncHandler } from "../utils/syncHandler.js";
 
-import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
-
-
+import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 
 /**
  * Zod schema for validating query parameters when listing farmers.
@@ -24,27 +27,27 @@ import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
  * @property {'asc'|'desc'} [sortOrder='desc'] - Sort order direction.
  */
 const listFarmersQuerySchema = z.object({
-    search: z.string().optional(),
-    page: z.coerce.number().int().positive().optional().default(1),
-    limit: z.coerce.number().int().positive().max(100).optional().default(10),
-    sortBy: z.enum(['name', 'createdAt', 'phoneNumber']).optional().default('createdAt'),
-    sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
+  sortBy: z
+    .enum(["name", "createdAt", "phoneNumber"])
+    .optional()
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
-
-
 
 /**
  * Zod schema for validating query parameters when looking up a farmer by phone number.
  *
  * @property {string} phone - Required phone number of the farmer to search for. Must be at least 1 character long.
- * 
+ *
  */
 const lookupQuerySchema = z.object({
-    phone: z.string().min(1, { message: 'Phone number query parameter is required.' }),
+  phone: z
+    .string()
+    .min(1, { message: "Phone number query parameter is required." }),
 });
-
-
-
 
 /**
  * Creates a new farmer record for the authenticated collection center user.
@@ -89,70 +92,75 @@ const lookupQuerySchema = z.object({
  *   "meta": { "timestamp": "2025-10-26T16:13:42.968Z" }
  * }
  */
-export const createFarmer = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const createFarmer = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     // 1. Get logged-in user ID from middleware
     const loggedInUserId = req.user?.userId;
     if (!loggedInUserId) {
-        throw new AppError(ERROR_CODES.UNAUTHORIZED, 'User ID not found in token payload.');
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "User ID not found in token payload."
+      );
     }
 
     // 2. Validate request body against Zod schema
     const validationResult = insertFarmerSchema.safeParse(req.body);
     if (!validationResult.success) {
+      const formattedFirstZodError = getFirstZodErrorMessage(
+        validationResult.error
+      );
 
-        // 1. Get the first error issue from Zod's error array
-        const firstError = validationResult.error.issues[0];
-        const fieldName = firstError.path.join('.');
-        const errorMessage = firstError.message;
-
-        // 4. Create a clean, combined message
-        const fullErrorMessage = `${fieldName}: ${errorMessage}`;
-
-        throw new AppError(
-            ERROR_CODES.VALIDATION_ERROR,
-            fullErrorMessage
-        );
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, formattedFirstZodError);
     }
     const validatedData: NewFarmer = validationResult.data;
 
-    // 3. Check if phone number already exists 
-    const existingFarmer = await db.select({ id: farmersTable.id })
-        .from(farmersTable)
-        .where(eq(farmersTable.phone_number, validatedData.phone_number))
-        .limit(1);
+    // 3. Check if phone number already exists
+    const existingFarmer = await db
+      .select({ id: farmersTable.id })
+      .from(farmersTable)
+      .where(eq(farmersTable.phone_number, validatedData.phone_number))
+      .limit(1);
 
     if (existingFarmer.length > 0) {
-        throw new AppError(ERROR_CODES.RESOURCE_CONFLICT, 'Phone number is already registered.');
+      throw new AppError(
+        ERROR_CODES.RESOURCE_CONFLICT,
+        "Phone number is already registered."
+      );
     }
 
     // 4. Insert the new farmer
-    const newFarmers = await db.insert(farmersTable)
-        .values({
+    const newFarmers = await db
+      .insert(farmersTable)
+      .values({
+        farmer_name: validatedData.farmer_name,
+        phone_number: validatedData.phone_number,
 
-            farmer_name: validatedData.farmer_name,
-            phone_number: validatedData.phone_number,
+        sector: validatedData.sector,
+        cell: validatedData.cell,
+        village: validatedData.village,
 
-            sector: validatedData.sector,
-            cell: validatedData.cell,
-            village: validatedData.village,
-
-            collection_center_id: loggedInUserId,
-        })
-        .returning({
-            id: farmersTable.id,
-            farmer_name: farmersTable.farmer_name,
-            phone_number: farmersTable.phone_number,
-        });
+        collection_center_id: loggedInUserId,
+      })
+      .returning({
+        id: farmersTable.id,
+        farmer_name: farmersTable.farmer_name,
+        phone_number: farmersTable.phone_number,
+      });
 
     if (newFarmers.length === 0) {
-        throw new AppError(ERROR_CODES.INTERNAL_ERROR, 'Failed to create farmer record.');
+      throw new AppError(
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to create farmer record."
+      );
     }
 
-    return ApiResponse.created(res, newFarmers[0], 'Farmer created successfully.');
-});
-
-
-
+    return ApiResponse.created(
+      res,
+      newFarmers[0],
+      "Farmer created successfully."
+    );
+  }
+);
 
 /**
  * Retrieves a paginated list of farmers belonging to the authenticated collection center.
@@ -170,18 +178,24 @@ export const createFarmer = asyncHandler(async (req: AuthenticatedRequest, res: 
  * @throws {AppError} Throws `VALIDATION_ERROR` if query parameters fail validation.
  * @returns {Promise<void>} Sends a paginated JSON response with farmers data and metadata.
  */
-export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-
+export const getAllFarmersForUser = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     // 1. Get logged-in user ID from middleware
     const loggedInUserId = req.user?.userId;
     if (!loggedInUserId) {
-        throw new AppError(ERROR_CODES.UNAUTHORIZED, 'User ID not found in token payload.');
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "User ID not found in token payload."
+      );
     }
 
     // 2. Validate query parameters
     const queryValidation = listFarmersQuerySchema.safeParse(req.query);
     if (!queryValidation.success) {
-        throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid query parameters.');
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid query parameters."
+      );
     }
 
     const { search, page, limit, sortBy, sortOrder } = queryValidation.data;
@@ -190,28 +204,29 @@ export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedReques
 
     // 3. Map sortBy to actual table columns safely
     const sortColumn = {
-        name: farmersTable.farmer_name,
-        createdAt: farmersTable.createdAt,
-        phoneNumber: farmersTable.phone_number,
+      name: farmersTable.farmer_name,
+      createdAt: farmersTable.createdAt,
+      phoneNumber: farmersTable.phone_number,
     }[sortBy];
 
-    const sortDirection = sortOrder === 'asc' ? asc : desc;
+    const sortDirection = sortOrder === "asc" ? asc : desc;
 
     // 3. Build the base query conditions
     const conditions = [eq(farmersTable.collection_center_id, loggedInUserId)];
     if (search) {
-        // Add search condition (case-insensitive)
-        const searchTerm = `%${search}%`;
-        conditions.push(
-            or(
-                ilike(farmersTable.farmer_name, searchTerm),
-                like(farmersTable.phone_number, searchTerm) // we used 'like' because phone format is strict (rw)
-            )! // Non-null assertion as 'or' can return undefined if array is empty, which isn't the case here that is why we added !
-        );
+      // Add search condition (case-insensitive)
+      const searchTerm = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(farmersTable.farmer_name, searchTerm),
+          like(farmersTable.phone_number, searchTerm) // we used 'like' because phone format is strict (rw)
+        )! // Non-null assertion as 'or' can return undefined if array is empty, which isn't the case here that is why we added !
+      );
     }
 
     // 5. Fetch paginated farmers
-    const farmers = await db.select({
+    const farmers = await db
+      .select({
         id: farmersTable.id,
         farmer_name: farmersTable.farmer_name,
         phone_number: farmersTable.phone_number,
@@ -219,37 +234,37 @@ export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedReques
         cell: farmersTable.cell,
         village: farmersTable.village,
         createdAt: farmersTable.createdAt,
-    })
-        .from(farmersTable)
-        .where(conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0])
-        .orderBy(sortDirection(sortColumn))
-        .limit(limit)
-        .offset(offset);
+      })
+      .from(farmersTable)
+      .where(conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0])
+      .orderBy(sortDirection(sortColumn))
+      .limit(limit)
+      .offset(offset);
 
     // 6. Fetch total count for pagination metadata
-    const totalResult = await db.select({ value: count() })
-        .from(farmersTable)
-        .where(conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0]);
+    const totalResult = await db
+      .select({ value: count() })
+      .from(farmersTable)
+      .where(
+        conditions.length > 1 ? or(...conditions.slice(1)) : conditions[0]
+      );
 
     const totalFarmers = totalResult[0]?.value ?? 0;
     const totalPages = Math.ceil(totalFarmers / limit);
 
-
-    return ApiResponse.paginated(res,
-        farmers,
-        {
-            currentPage: page,
-            totalPages: totalPages,
-            limit: limit,
-            total: totalFarmers,
-        },
-        'Farmers retrieved successfully.'
+    return ApiResponse.paginated(
+      res,
+      farmers,
+      {
+        currentPage: page,
+        totalPages: totalPages,
+        limit: limit,
+        total: totalFarmers,
+      },
+      "Farmers retrieved successfully."
     );
-
-});
-
-
-
+  }
+);
 
 /**
  * Retrieves a farmer record by phone number for the authenticated collection center.
@@ -271,24 +286,31 @@ export const getAllFarmersForUser = asyncHandler(async (req: AuthenticatedReques
  * GET /api/farmer/lookup?phone=0788123456
  *
  */
-export const findFarmerByPhoneForUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-
+export const findFarmerByPhoneForUser = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     // 1. Get logged-in user ID from middleware
     const loggedInUserId = req.user?.userId;
     if (!loggedInUserId) {
-        throw new AppError(ERROR_CODES.UNAUTHORIZED, 'User ID not found in token payload.');
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "User ID not found in token payload."
+      );
     }
 
     // Validate query parameters
     const queryValidation = lookupQuerySchema.safeParse(req.query);
     if (!queryValidation.success) {
-        throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid query parameters.');
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid query parameters."
+      );
     }
 
     const { phone } = queryValidation.data;
 
     // Query for the farmer matching the phone number AND the logged-in user's ID
-    const foundFarmers = await db.select({
+    const foundFarmers = await db
+      .select({
         id: farmersTable.id,
         farmer_name: farmersTable.farmer_name,
         phone_number: farmersTable.phone_number,
@@ -296,19 +318,23 @@ export const findFarmerByPhoneForUser = asyncHandler(async (req: AuthenticatedRe
         cell: farmersTable.cell,
         village: farmersTable.village,
         createdAt: farmersTable.createdAt,
-    })
-        .from(farmersTable)
-        .where(
-            and(
-                eq(farmersTable.collection_center_id, loggedInUserId),
-                eq(farmersTable.phone_number, phone)
-            )
+      })
+      .from(farmersTable)
+      .where(
+        and(
+          eq(farmersTable.collection_center_id, loggedInUserId),
+          eq(farmersTable.phone_number, phone)
         )
-        .limit(1);
+      )
+      .limit(1);
 
     if (foundFarmers.length === 0) {
-        throw new AppError(ERROR_CODES.NOT_FOUND, `Farmer with phone number ${phone} not found.`);
+      throw new AppError(
+        ERROR_CODES.NOT_FOUND,
+        `Farmer with phone number ${phone} not found.`
+      );
     }
 
-    return ApiResponse.ok(res, foundFarmers[0], 'Farmer found.');
-});
+    return ApiResponse.ok(res, foundFarmers[0], "Farmer found.");
+  }
+);
