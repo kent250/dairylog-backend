@@ -73,22 +73,30 @@ const router = Router();
  *                     timestamp:
  *                       type: string
  *                       example: 2025-10-26T21:19:17.813Z
-
  *       404:
- *         description: Farmer not found
+ *         description: Farmer not found for provided phone number.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "NOT_FOUND"
+ *                 message: "Farmer with ID 1245 not found or does not belong to this collection center."
+ *                 timestamp: "2025-10-26T18:27:40.445Z"
+ *                 statusCode: 404
+ *
  *       500:
- *         description: Internal server error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "INTERNAL_SERVER_ERROR"
+ *                 message: "Something went wrong."
+ *                 timestamp: "2025-10-26T18:30:00.000Z"
+ *                 statusCode: 500
  */
-router.post('/', recordMilkDelivery);
-
-
+router.post("/", recordMilkDelivery);
 
 export default router;
-
-
-
-
-
-
-
-
