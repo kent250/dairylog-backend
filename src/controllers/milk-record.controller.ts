@@ -1,5 +1,6 @@
 import type { Response } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, count } from "drizzle-orm";
+import { z } from "zod";
 
 import { db } from "../db/index.js";
 import { farmersTable } from "../db/schemas/farmer.schema.js";
@@ -116,6 +117,200 @@ export const recordMilkDelivery = asyncHandler(
       res,
       responseObject,
       "Milk recorded successfully."
+    );
+  }
+);
+
+/**
+ * Zod schema for validating query parameters when retrieving milk records.
+ *
+ * @property {number} [farmerId] - Optional ID of a farmer to filter records.
+ * @property {string} [startDate] - Optional start date (ISO 8601 format) to filter records from.
+ * @property {string} [endDate] - Optional end date (ISO 8601 format) to filter records until.
+ * @property {number} [page=1] - Page number for pagination (must be a positive integer).
+ * @property {number} [limit=10] - Number of records per page (maximum 100).
+ * @property {'recordedAt'|'liters'|'farmerName'} [sortBy='recordedAt'] - Field to sort results by.
+ * @property {'asc'|'desc'} [sortOrder='desc'] - Sort direction (ascending or descending).
+ *
+ * @description
+ * Ensures query parameters for listing milk records are valid.
+ * It also validates that the `endDate` is not earlier than the `startDate`.
+ *
+ * @example
+ * // Valid query:
+ * {
+ *   farmerId: 12,
+ *   startDate: "2025-10-01",
+ *   endDate: "2025-10-26",
+ *   page: 1,
+ *   limit: 20,
+ *   sortBy: "liters",
+ *   sortOrder: "asc"
+ * }
+ */
+const listMilkRecordsQuerySchema = z
+  .object({
+    farmerId: z.coerce.number().int().positive().optional(),
+    // Date validation (expects ISO 8601 format like YYYY-MM-DD or full timestamp)
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    // Pagination and Sorting
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    sortBy: z
+      .enum(["recordedAt", "liters", "farmerName"])
+      .optional()
+      .default("recordedAt"),
+    sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return data.endDate >= data.startDate;
+      }
+      return true;
+    },
+    {
+      message: "End date cannot be before start date.",
+      path: ["endDate"],
+    }
+  );
+
+/**
+ * Retrieves all milk records associated with the authenticated collection center user.
+ *
+ * Supports optional filtering by farmer, date range, pagination, and sorting.
+ *
+ * @async
+ * @function getMilkRecordsForUser
+ * @param {AuthenticatedRequest} req - Express request object, containing the authenticated user's ID and query parameters.
+ * @param {Response} res - Express response object used to send the paginated list of milk records.
+ * @throws {AppError} Throws an UNAUTHORIZED error if the user is not authenticated.
+ * @throws {AppError} Throws a VALIDATION_ERROR if query parameters fail validation.
+ * @returns {Promise<void>} Sends a paginated list of milk records with metadata.
+ *
+ * @example
+ * // Example request:
+ * GET /api/milk-record?farmerId=5&startDate=2025-10-01&endDate=2025-10-26&page=1&limit=10&sortBy=liters&sortOrder=asc
+ *
+ * // Example response:
+ * {
+ *   "success": true,
+ *   "data": [
+ *     {
+ *       "recordId": 14,
+ *       "liters": "25.00",
+ *       "recordedAt": "2025-10-26T21:19:17.771Z",
+ *       "farmer": {
+ *         "id": 1,
+ *         "name": "Jean Bosco Nkurunziza",
+ *         "phoneNumber": "0788123456"
+ *       }
+ *     }
+ *   ],
+ *   "meta": {
+ *     "currentPage": 1,
+ *     "totalPages": 3,
+ *     "limit": 10,
+ *     "total": 25,
+ *     "timestamp": "2025-10-26T21:19:17.813Z"
+ *   },
+ *   "message": "Milk records retrieved successfully."
+ * }
+ */
+
+export const getMilkRecordsForUser = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // 1. Get logged-in user ID from middleware
+    const loggedInUserId = req.user?.userId;
+    if (!loggedInUserId) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "User ID not found in token payload."
+      );
+    }
+
+    const queryValidation = listMilkRecordsQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      const formattedFirstZodError = getFirstZodErrorMessage(
+        queryValidation.error
+      );
+
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, formattedFirstZodError);
+    }
+
+    const { farmerId, startDate, endDate, page, limit, sortBy, sortOrder } =
+      queryValidation.data;
+
+    const offset = (page - 1) * limit;
+
+    // Map sortBy to actual table columns/joins safely
+    const sortColumn = {
+      recordedAt: milkRecordsTable.recordedAt,
+      liters: milkRecordsTable.liters,
+      farmerName: farmersTable.farmer_name,
+    }[sortBy];
+
+    const sortDirection = sortOrder === "asc" ? asc : desc;
+
+    const conditions = [
+      eq(milkRecordsTable.recorded_by_collection_id, loggedInUserId),
+    ];
+
+    if (farmerId) {
+      conditions.push(eq(milkRecordsTable.farmer_id, farmerId));
+    }
+    if (startDate) {
+      conditions.push(gte(milkRecordsTable.recordedAt, startDate));
+    }
+
+    if (endDate) {
+      const adjustedEndDate = new Date(endDate);
+      adjustedEndDate.setHours(23, 59, 59, 999);
+      conditions.push(lte(milkRecordsTable.recordedAt, adjustedEndDate));
+    }
+
+    // --- Build Query ---
+    const query = db
+      .select({
+        recordId: milkRecordsTable.id,
+        liters: milkRecordsTable.liters,
+        recordedAt: milkRecordsTable.recordedAt,
+        farmer: {
+          id: farmersTable.id,
+          name: farmersTable.farmer_name,
+          phoneNumber: farmersTable.phone_number,
+        },
+      })
+      .from(milkRecordsTable)
+      .innerJoin(farmersTable, eq(milkRecordsTable.farmer_id, farmersTable.id))
+      .where(and(...conditions))
+      .orderBy(sortDirection(sortColumn))
+      .limit(limit)
+      .offset(offset);
+
+    // Fetch the records
+    const records = await query;
+
+    // Fetch total count with the same filters
+    const totalResult = await db
+      .select({ value: count() })
+      .from(milkRecordsTable)
+      .where(and(...conditions));
+
+    const totalRecords = totalResult[0]?.value ?? 0;
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    return ApiResponse.paginated(
+      res,
+      records,
+      {
+        currentPage: page,
+        totalPages: totalPages,
+        limit: limit,
+        total: totalRecords,
+      },
+      "Milk records retrieved successfully."
     );
   }
 );
