@@ -54,7 +54,7 @@ export const recordMilkDelivery = asyncHandler(
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, formattedFirstZodError);
     }
 
-    const { farmer_id, liters } = validationResult.data;
+    const { farmer_id, liters, price_per_liter } = validationResult.data;
     const responseObject = await db.transaction(async (trx) => {
       // Verify farmer exists and belongs to this collection center
       const farmerCheck = await trx
@@ -80,6 +80,7 @@ export const recordMilkDelivery = asyncHandler(
         .insert(milkRecordsTable)
         .values({
           farmer_id,
+          price_per_liter: price_per_liter.toString(),
           liters: liters.toString(),
           recorded_by_collection_id: loggedInUserId,
         })
@@ -98,6 +99,7 @@ export const recordMilkDelivery = asyncHandler(
         columns: {
           id: true,
           farmer_id: true,
+          price_per_liter: true,
           liters: true,
           recordedAt: true,
         },
@@ -111,7 +113,18 @@ export const recordMilkDelivery = asyncHandler(
         },
       });
 
-      return record;
+      if (!record) {
+        throw new AppError(
+          ERROR_CODES.INTERNAL_ERROR,
+          "Failed to retrieve milk record after insertion."
+        );
+      }
+
+      return {
+        ...record,
+        price_per_liter: parseFloat(record.price_per_liter),
+        liters: parseFloat(record.liters),
+      };
     });
 
     if (!responseObject) {
