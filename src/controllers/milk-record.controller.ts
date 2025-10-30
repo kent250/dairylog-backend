@@ -16,7 +16,7 @@ import { ApiResponse } from "../utils/api-response.js";
 import { asyncHandler } from "../utils/syncHandler.js";
 
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
-import { sendEasySms } from "../services/sms.service.js";
+import { sendScheduledSms } from "../services/sms.service.js";
 
 /**
  * Record a milk delivery for a farmer.
@@ -121,8 +121,15 @@ export const recordMilkDelivery = asyncHandler(
       );
     }
 
-    //send SMS to farmer
-    await sendEasySms(responseObject?.farmer.phone_number, `${responseObject?.liters} Liters was Delivered Today, Thank you`, "0")
+    const farmerPhoneNumber = responseObject.farmer.phone_number;
+    const litersRecord = responseObject.liters;
+    const recordedAt = responseObject.recordedAt.toDateString();
+
+    //send SMS
+    sendScheduledSms({
+      content: `${litersRecord} has been recorded, Today ${recordedAt}`,
+      to: farmerPhoneNumber,
+    });
 
     return ApiResponse.created(
       res,

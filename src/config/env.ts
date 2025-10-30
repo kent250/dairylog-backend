@@ -51,17 +51,16 @@ const envSchema = z.object({
   // --- Database ---
   DATABASE_URL: z.string().url("Invalid DATABASE_URL format"),
 
-
-  // --- EasySendSMS ---
-  EASY_SEND_SMS_API_URL: z
+  // --- HttpSMS ---
+  HTTP_SMS_API_URL: z
     .string()
-    .min(10, "EASY_SEND_SMS_API_URL must be at least 10 characters long"),
-  EASY_SEND_SMS_SENDER_ID: z
+    .min(10, "HTTP_SMS_API_URL must be at least 10 characters long"),
+  HTTP_SMS_API_KEY: z
     .string()
-    .min(3, "EASY_SEND_SMS_SENDER_ID must be at least 3 characters long"),
-  EASY_SEND_SMS_API_KEY: z
+    .min(3, "HTTP_SMS_API_KEY must be at least 3 characters long"),
+  HTTP_SMS_FROM_NUMBER: z
     .string()
-    .min(3, "EASY_SEND_SMS_API_KEY must be at least 3 characters long"),
+    .min(10, "HTTP_SMS_FROM_NUMBER must be at least 10 characters long"),
 
   // --- Security ---
   JWT_ACCESS_SECRET: z
@@ -81,9 +80,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_STAGING: z
@@ -92,9 +91,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_DEVELOPMENT: z
@@ -103,9 +102,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_LOCAL: z
@@ -114,9 +113,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
         : ["http://localhost:3000", "http://127.0.0.1:3000"]
     ),
 });
@@ -179,11 +178,11 @@ export const config = {
   environment: env.NODE_ENV,
   apiBaseUrl: env.API_BASE_URL,
 
-  // --- EasySendSMS ---
-  easy_send_sms: {
-    EASY_SEND_SMS_API_URL: env.EASY_SEND_SMS_API_URL,
-    EASY_SEND_SMS_SENDER_ID: env.EASY_SEND_SMS_SENDER_ID,
-    EASY_SEND_SMS_API_KEY: env.EASY_SEND_SMS_API_KEY,
+  // --- httpSMS ---
+  http_sms: {
+    HTTP_SMS_API_URL: env.HTTP_SMS_API_URL,
+    HTTP_SMS_API_KEY: env.HTTP_SMS_API_KEY,
+    HTTP_SMS_FROM_NUMBER: env.HTTP_SMS_FROM_NUMBER,
   },
 
   // --- Security ---
@@ -202,6 +201,7 @@ export const config = {
 } as const;
 
 console.log(
-  `✓ CORS Origins for ${config.environment}: ${config.corsOrigins.join(", ") || "[]"
+  `✓ CORS Origins for ${config.environment}: ${
+    config.corsOrigins.join(", ") || "[]"
   }`
 );

@@ -1,116 +1,79 @@
-import axios, { type AxiosError } from 'axios';
+import axios, { AxiosError, AxiosInstance } from "axios";
 
-import { config } from '../config/env.js';
-import { formatRwandanPrefix } from '../utils/phone-number-util.js';
+import { config } from "../config/env.js";
+import { formatRwandanPrefix } from "../utils/phone-number-util.js";
 
 import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
 import { AppError } from "../utils/error-utils/AppError.js";
 
-
-
-interface EasySendSmsPayload {
-    from: string;
-    to: string;
-    text: string;
-    type: "0" | "1";
-    scheduled?: string;
+/**
+ * Parameters for sending an SMS message
+ */
+export interface SendSmsParams {
+  content: string;
+  to: string;
 }
-
-interface EasySendSmsSuccessResponse {
-    status: string;
-    messageId?: string;
-}
-
-interface EasySendSmsErrorResponse {
-    status: string;
-    message: string;
-    code?: number;
-}
-
-const EASY_SEND_SMS_API_URL = config.easy_send_sms.EASY_SEND_SMS_API_URL;
-const EASY_SEND_SMS_SENDER_ID = config.easy_send_sms.EASY_SEND_SMS_SENDER_ID;
-const EASY_SEND_SMS_API_KEY = config.easy_send_sms.EASY_SEND_SMS_API_KEY;
 
 /**
- * Sends an SMS using the EasySendSMS API via axios.
- * @param recipientNumber  recipient phone number.
- * @param message The text message content.
- * @param messageType 0 for plain text, 1 for Unicode.
- * @param scheduledTime Optional ISO 8601 UTC timestamp.
- * @returns Promise resolving to the API response object.
+ * Send an SMS message scheduled 10 seconds in the future
+ *
+ * @param params - SMS parameters with content and recipient phone number
+ * @returns Promise resolving to the API response
+ *
+ * @example
+ * ```typescript
+ * await sendScheduledSms({
+ *   content: "Your verification code is 123456",
+ *   to: "+250788888888",
+ * });
+ * ```
  */
-export async function sendEasySms(
-    recipientNumber: string,
-    message: string,
-    messageType: "0" | "1",
-    scheduledTime?: string,
-): Promise<EasySendSmsSuccessResponse | EasySendSmsErrorResponse> {
+export async function sendScheduledSms(params: SendSmsParams): Promise<void> {
+  // Basic validation
+  if (!params.content || params.content.trim().length === 0) {
+    throw new AppError(ERROR_CODES.BAD_REQUEST, "SMS content cannot be empty");
+  }
 
-    if (!EASY_SEND_SMS_API_KEY) {
-        throw new AppError(ERROR_CODES.INVALID_ENV_VARIABLE, 'API Key is missing');
-    }
+  const formatedPhone = formatRwandanPrefix(params.to);
 
-    //get new phone numbers with rwandan prefix
-    const formattedNumber = formatRwandanPrefix(recipientNumber)
+  if (!formatedPhone || !/^\+[1-9]\d{1,14}$/.test(formatedPhone)) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid phone number. Must be in E.164 format (e.g., +250788888888)"
+    );
+  }
 
-    const payload: EasySendSmsPayload = {
-        from: EASY_SEND_SMS_SENDER_ID,
-        to: formattedNumber,
-        text: message,
-        type: messageType,
-    };
+  // Schedule 10 seconds in the future
+  const scheduledTime = new Date(Date.now() + 10 * 1000);
 
-    if (scheduledTime) {
-        payload.scheduled = scheduledTime;
-    }
-
-    // --- Axios Request Config ---
-    const config = {
+  try {
+    await axios.post(
+      `${config.http_sms.HTTP_SMS_API_URL}/messages/send`,
+      {
+        content: params.content,
+        from: config.http_sms.HTTP_SMS_FROM_NUMBER,
+        to: formatedPhone,
+        encrypted: false,
+        send_at: scheduledTime.toISOString(),
+      },
+      {
         headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'apikey': EASY_SEND_SMS_API_KEY
-        }
-    };
-    // --- End Axios Request Config ---
+          "x-api-key": config.http_sms.HTTP_SMS_API_KEY,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+      }
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const message = error.response?.data?.message;
 
-    try {
-        // --- Use axios.post ---
-        const response = await axios.post<EasySendSmsSuccessResponse>(
-            EASY_SEND_SMS_API_URL,
-            payload,
-            config
-        );
-
-
-        return response.data;
-
-    } catch (error) {
-
-
-        // --- Axios Specific Error Handling ---
-        if (axios.isAxiosError(error)) {
-            const axiosError = error as AxiosError<EasySendSmsErrorResponse>;
-            const status = axiosError.response?.status;
-            const errorData = axiosError.response?.data;
-
-            return {
-                status: 'error',
-                message: `API request failed with status ${status}: ${errorData?.message || axiosError.message}`,
-                code: status
-            } as EasySendSmsErrorResponse;
-
-        } else {
-            // Handle non-Axios errors (e.g., network issues before request)
-            let errorMessage = 'An unexpected error occurred while sending SMS.';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            return {
-                status: 'error',
-                message: errorMessage,
-            } as EasySendSmsErrorResponse;
-        }
-        // --- End Axios Error Handling ---
+      throw new AppError(
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        `Failed to send SMS: ${message || error.message}`
+      );
     }
+    throw error;
+  }
 }
