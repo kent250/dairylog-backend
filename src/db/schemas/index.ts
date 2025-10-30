@@ -1,7 +1,7 @@
-import * as userSchema from "./user.schema.js";
-import * as farmerSchema from "./farmer.schema.js";
-import * as refreshTokenSchema from "./refresh-token.schema.js";
-import * as milkRecordsSchema from "./milk-record.schema.js";
+import * as userSchema from "./user.schema";
+import * as farmerSchema from "./farmer.schema";
+import * as refreshTokenSchema from "./refresh-token.schema";
+import * as milkRecordsSchema from "./milk-record.schema";
 
 /**
  * This object is for your RUNTIME.
@@ -16,7 +16,7 @@ export const schema = {
 };
 
 // We also re-export the types for convenience
-export * from "./user.schema.js";
-export * from "./farmer.schema.js";
-export * from "./refresh-token.schema.js";
-export * from "./milk-record.schema.js";
+export * from "./user.schema";
+export * from "./farmer.schema";
+export * from "./refresh-token.schema";
+export * from "./milk-record.schema";

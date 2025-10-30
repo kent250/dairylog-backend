@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { registerNewCollectionUser, login, refreshToken, logout } from "../controllers/auth.controller.js";
+import {
+  registerNewCollectionUser,
+  login,
+  refreshToken,
+  logout,
+} from "../controllers/auth.controller.js";
 const router = Router();
 
 /**
@@ -21,6 +26,8 @@ const router = Router();
  *               - username
  *               - email
  *               - password
+ *               - phone_number
+ *               - location
  *             properties:
  *               collection_name:
  *                 type: string
@@ -36,6 +43,12 @@ const router = Router();
  *                 type: string
  *                 format: password
  *                 example: secret123
+ *               phone_number:
+ *                 type: string
+ *                 example: "0783741533"
+ *               location:
+ *                 type: string
+ *                 example: Kicukiro
  *     responses:
  *       200:
  *         description: User registered successfully
@@ -56,12 +69,18 @@ const router = Router();
  *                     collection_name:
  *                       type: string
  *                       example: MyAwesomeCollection
- *                     email:
- *                       type: string
- *                       example: john@example.com
  *                     username:
  *                       type: string
  *                       example: john_doe
+ *                     email:
+ *                       type: string
+ *                       example: john@example.com
+ *                     phone_number:
+ *                       type: string
+ *                       example: "0783741533"
+ *                     location:
+ *                       type: string
+ *                       example: Kicukiro
  *                     createdAt:
  *                       type: string
  *                       format: date-time
@@ -155,7 +174,7 @@ router.post("/register", registerNewCollectionUser);
  *               password:
  *                 type: string
  *                 format: password
- *                 example: admin123
+ *                 example: admin@123
  *     responses:
  *       200:
  *         description: Login successful
@@ -242,8 +261,8 @@ router.post("/login", login);
  *   post:
  *     summary: Refresh access and refresh tokens
  *     description: >
- *       Generates a new access token and refresh token pair using a valid existing refresh token.  
- *       The old refresh token is invalidated (token rotation).  
+ *       Generates a new access token and refresh token pair using a valid existing refresh token.
+ *       The old refresh token is invalidated (token rotation).
  *       Requires both `refreshToken` and `userId` in the request body.
  *     tags:
  *       - Authentication
@@ -362,8 +381,8 @@ router.post("/refresh-token", refreshToken);
  * /auth/logout:
  *   post:
  *     summary: Logs out the user
- *     description: Invalidates the provided refresh token, effectively logging the user out. 
- *                  Even if the token is invalid or missing, a generic success message is returned 
+ *     description: Invalidates the provided refresh token, effectively logging the user out.
+ *                  Even if the token is invalid or missing, a generic success message is returned
  *                  to prevent token enumeration.
  *     tags:
  *       - Authentication
@@ -423,11 +442,6 @@ router.post("/refresh-token", refreshToken);
  *                       type: string
  *                       example: Refresh token required.
  */
-router.post('/logout', logout);
-
-
+router.post("/logout", logout);
 
 export default router;
-
-
-

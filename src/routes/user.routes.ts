@@ -2,7 +2,6 @@ import { Router } from "express";
 import { getProfile } from "../controllers/user.controller.js";
 const router = Router();
 
-
 /**
  * @openapi
  * /user/profile:
@@ -33,6 +32,12 @@ const router = Router();
  *                     username:
  *                       type: string
  *                       example: kicukiro
+ *                     location:
+ *                       type: string
+ *                       example: kicukiro
+ *                     phone_number:
+ *                       type: string
+ *                       example: 0783741533
  *                     email:
  *                       type: string
  *                       example: kicukiro@inyange.cfodm
@@ -157,8 +162,4 @@ const router = Router();
  */
 router.get("/profile", getProfile);
 
-
 export default router;
-
-
-
