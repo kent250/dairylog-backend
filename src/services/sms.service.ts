@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios from "axios";
 
 import { config } from "../config/env.js";
 import { formatRwandanPrefix } from "../utils/phone-number-util.js";
@@ -66,7 +66,7 @@ export async function sendScheduledSms(params: SendSmsParams): Promise<void> {
     );
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
+      // const status = error.response?.status;
       const message = error.response?.data?.message;
 
       throw new AppError(

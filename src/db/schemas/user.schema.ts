@@ -1,14 +1,21 @@
-import { integer, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import {
-    createInsertSchema,
-    createSelectSchema,
-    createUpdateSchema,
-} from 'drizzle-zod';
-import { relations } from 'drizzle-orm';
-import type { z } from 'zod';
-import { refreshTokensTable } from './refresh-token.schema.js';
-import { farmersTable } from './farmer.schema.js';
-import { milkRecordsTable } from './milk-record.schema.js';
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-zod";
+import { relations } from "drizzle-orm";
+import type { z } from "zod";
+
+import { refreshTokensTable } from "./refresh-token.schema.js";
+import { farmersTable } from "./farmer.schema.js";
+import { milkRecordsTable } from "./milk-record.schema.js";
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -17,14 +24,16 @@ import { milkRecordsTable } from './milk-record.schema.js';
 // The Zod schemas will be automatically generated from this.
 // ------------------------------------------------------------------
 
-export const users = pgTable('users', {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
-    collection_name: varchar('collection_name'),
-    username: varchar('username').unique().notNull(),
-    email: varchar('email').notNull().unique(),
-    password: text('password').notNull().unique(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
+  collection_name: varchar("collection_name").notNull(),
+  location: varchar("location"),
+  username: varchar("username").unique().notNull(),
+  email: varchar("email").notNull().unique(),
+  phone_number: varchar("phone_number", { length: 50 }),
+  password: text("password").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // ------------------------------------------------------------------
@@ -41,14 +50,15 @@ export const users = pgTable('users', {
  * - We add refinements for email and password.
  */
 export const insertUserSchema = createInsertSchema(users, {
-    // Add Zod refinements for validation
-    // These fields are already REQUIRED by default because of Drizzle's .notNull()
-    username: (schema) =>
-        schema.min(3, { message: 'Username must be at least 3 characters long' }), // <-- OPTIONAL ENHANCEMENT
-    email: (schema) =>
-        schema.email({ message: 'Invalid email address' }),
-    password: (schema) =>
-        schema.min(8, { message: 'Password must be at least 8 characters long' }),
+  // Add Zod refinements for validation
+  // These fields are already REQUIRED by default because of Drizzle's .notNull()
+  username: (schema) =>
+    schema.min(3, { message: "Username must be at least 3 characters long" }),
+  location: (schema) =>
+    schema.min(3, { message: "location must be at least 3 characters long" }),
+  email: (schema) => schema.email({ message: "Invalid email address" }),
+  password: (schema) =>
+    schema.min(8, { message: "Password must be at least 8 characters long" }),
 });
 
 /**
@@ -58,7 +68,7 @@ export const insertUserSchema = createInsertSchema(users, {
  * - **Crucially, we omit the password** for security.
  */
 export const selectUserSchema = createSelectSchema(users).omit({
-    password: true,
+  password: true,
 });
 
 /**
@@ -69,10 +79,12 @@ export const selectUserSchema = createSelectSchema(users).omit({
  * - We add refinements for fields that can be updated.
  */
 export const updateUserSchema = createUpdateSchema(users, {
-    email: (schema) =>
-        schema.email({ message: 'Invalid email address' }).optional(),
-    password: (schema) =>
-        schema.min(8, { message: 'Password must be at least 8 characters' }).optional(),
+  email: (schema) =>
+    schema.email({ message: "Invalid email address" }).optional(),
+  password: (schema) =>
+    schema
+      .min(8, { message: "Password must be at least 8 characters" })
+      .optional(),
 });
 
 // ------------------------------------------------------------------
@@ -97,10 +109,8 @@ export type NewUser = z.infer<typeof insertUserSchema>;
  */
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 
-
-
 export const usersRelations = relations(users, ({ many }) => ({
-    refreshTokens: many(refreshTokensTable),
-    registeredFarmers: many(farmersTable),
-    recordedMilkRecords: many(milkRecordsTable),
+  refreshTokens: many(refreshTokensTable),
+  registeredFarmers: many(farmersTable),
+  recordedMilkRecords: many(milkRecordsTable),
 }));

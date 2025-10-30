@@ -29,6 +29,20 @@
       "when": 1761508195435,
       "tag": "0003_add-milk-record-schema-and-migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1761825129510,
+      "tag": "0004_add-location-column-on-users-table",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1761825351872,
+      "tag": "0005_add-phone-number-column-on-users-table",
+      "breakpoints": true
     }
   ]
 }

@@ -1,13 +1,10 @@
-import { integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
-import {
-    createInsertSchema,
-    createSelectSchema,
-} from 'drizzle-zod';
-import { relations } from 'drizzle-orm';
-import { type z } from 'zod';
+import { integer, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
+import { type z } from "zod";
 
-import { users } from './user.schema.js';
-import { milkRecordsTable } from './milk-record.schema.js';
+import { users } from "./user.schema.js";
+import { milkRecordsTable } from "./milk-record.schema.js";
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -16,28 +13,29 @@ import { milkRecordsTable } from './milk-record.schema.js';
 // The Zod schemas will be automatically generated from this.
 // ------------------------------------------------------------------
 
-export const farmersTable = pgTable('farmers', {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
-    farmer_name: varchar('farmer_name', { length: 200 }).notNull(),
-    phone_number: varchar('phone_number', { length: 50 }).unique().notNull(),
+export const farmersTable = pgTable("farmers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
+  farmer_name: varchar("farmer_name", { length: 200 }).notNull(),
+  phone_number: varchar("phone_number", { length: 50 }).unique().notNull(),
 
-    sector: varchar('sector', { length: 100 }).notNull(),
-    cell: varchar('cell', { length: 100 }),
-    village: varchar('village', { length: 100 }),
+  sector: varchar("sector", { length: 100 }).notNull(),
+  cell: varchar("cell", { length: 100 }),
+  village: varchar("village", { length: 100 }),
 
-    collection_center_id: integer('collection_center_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  collection_center_id: integer("collection_center_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
 
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-
 export const farmersRelations = relations(farmersTable, ({ one, many }) => ({
-    collectionCenter: one(users, {
-        fields: [farmersTable.collection_center_id],
-        references: [users.id],
-    }),
-    milkRecords: many(milkRecordsTable),
+  collectionCenter: one(users, {
+    fields: [farmersTable.collection_center_id],
+    references: [users.id],
+  }),
+  milkRecords: many(milkRecordsTable),
 }));
 
 // ------------------------------------------------------------------
@@ -55,38 +53,37 @@ export const farmersRelations = relations(farmersTable, ({ one, many }) => ({
  * - Refinements add specific validation rules (e.g., minimum length).
  */
 export const insertFarmerSchema = createInsertSchema(farmersTable, {
-    farmer_name: (schema) =>
-        schema
-            .min(2, { message: 'Farmer name must be at least 2 characters long' })
-            .max(200, { message: 'Farmer name cannot exceed 200 characters' }),
+  farmer_name: (schema) =>
+    schema
+      .min(2, { message: "Farmer name must be at least 2 characters long" })
+      .max(200, { message: "Farmer name cannot exceed 200 characters" }),
 
-    phone_number: (schema) =>
-        schema
-            .regex(/^(\+?25)?(07[2389])[0-9]{7}$/, { message: "Invalid Rwandan phone number format" }),
+  phone_number: (schema) =>
+    schema.regex(/^(\+?25)?(07[2389])[0-9]{7}$/, {
+      message: "Invalid Rwandan phone number format",
+    }),
 
-    sector: (schema) =>
-        schema
-            .min(2, { message: 'Sector must be at least 2 characters long' })
-            .max(100, { message: 'Sector cannot exceed 100 characters' }),
+  sector: (schema) =>
+    schema
+      .min(2, { message: "Sector must be at least 2 characters long" })
+      .max(100, { message: "Sector cannot exceed 100 characters" }),
 
-    cell: (schema) =>
-        schema
-            .min(2, { message: 'Sector must be at least 2 characters long' })
-            .max(100, { message: 'Cell cannot exceed 100 characters' }),
+  cell: (schema) =>
+    schema
+      .min(2, { message: "Sector must be at least 2 characters long" })
+      .max(100, { message: "Cell cannot exceed 100 characters" }),
 
-    village: (schema) =>
-        schema
-            .min(2, { message: 'Sector must be at least 2 characters long' })
-            .max(100, { message: 'Village cannot exceed 100 characters' })
+  village: (schema) =>
+    schema
+      .min(2, { message: "Sector must be at least 2 characters long" })
+      .max(100, { message: "Village cannot exceed 100 characters" }),
 }).omit({
-    collection_center_id: true,
+  collection_center_id: true,
 });
-
 
 export const selectFarmerSchema = createSelectSchema(farmersTable).omit({
-    updatedAt: true,
+  updatedAt: true,
 });
-
 
 // export const updateUserSchema = createUpdateSchema(users, {
 //     email: (schema) =>
@@ -94,7 +91,6 @@ export const selectFarmerSchema = createSelectSchema(farmersTable).omit({
 //     password: (schema) =>
 //         schema.min(8, { message: 'Password must be at least 8 characters' }).optional(),
 // });
-
 
 // ------------------------------------------------------------------
 // 3. TYPESCRIPT TYPES (Derived from Zod Schemas)
@@ -110,8 +106,4 @@ export type Farmer = z.infer<typeof selectFarmerSchema>;
  */
 export type NewFarmer = z.infer<typeof insertFarmerSchema>;
 
-
 // export type UpdateUser = z.infer<typeof updateUserSchema>;
-
-
-

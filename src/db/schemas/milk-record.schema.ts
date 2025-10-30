@@ -1,13 +1,10 @@
-import { decimal, integer, pgTable, timestamp } from 'drizzle-orm/pg-core';
-import {
-    createInsertSchema,
-    createSelectSchema,
-} from 'drizzle-zod';
-import { relations } from 'drizzle-orm';
-import { z } from 'zod';
+import { decimal, integer, pgTable, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
+import { z } from "zod";
 
-import { users } from './user.schema.js';
-import { farmersTable } from './farmer.schema.js';
+import { users } from "./user.schema.js";
+import { farmersTable } from "./farmer.schema.js";
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -16,28 +13,33 @@ import { farmersTable } from './farmer.schema.js';
 // The Zod schemas will be automatically generated from this.
 // ------------------------------------------------------------------
 
-export const milkRecordsTable = pgTable('milk_records', {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
+export const milkRecordsTable = pgTable("milk_records", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
 
-    liters: decimal('liters', { precision: 10, scale: 2 }).notNull(),
-    farmer_id: integer('farmer_id').notNull().references(() => farmersTable.id, { onDelete: 'restrict' }),
+  liters: decimal("liters", { precision: 10, scale: 2 }).notNull(),
+  farmer_id: integer("farmer_id")
+    .notNull()
+    .references(() => farmersTable.id, { onDelete: "restrict" }),
 
-    recorded_by_collection_id: integer('recorded_by_collection_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  recorded_by_collection_id: integer("recorded_by_collection_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
 
-    recordedAt: timestamp('recorded_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  recordedAt: timestamp("recorded_at", { mode: "date", withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-
 export const milkRecordsRelations = relations(milkRecordsTable, ({ one }) => ({
-    farmer: one(farmersTable, {
-        fields: [milkRecordsTable.farmer_id],
-        references: [farmersTable.id],
-    }),
-    recordedBy: one(users, {
-        fields: [milkRecordsTable.recorded_by_collection_id],
-        references: [users.id],
-    }),
+  farmer: one(farmersTable, {
+    fields: [milkRecordsTable.farmer_id],
+    references: [farmersTable.id],
+  }),
+  recordedBy: one(users, {
+    fields: [milkRecordsTable.recorded_by_collection_id],
+    references: [users.id],
+  }),
 }));
 
 // ------------------------------------------------------------------
@@ -55,29 +57,30 @@ export const milkRecordsRelations = relations(milkRecordsTable, ({ one }) => ({
  * - Refinements add specific validation rules.
  */
 export const insertMilkRecordSchema = createInsertSchema(milkRecordsTable, {
-    /**
-     * 'liters' is a decimal, which drizzle-zod maps to a string.
-     * We override it to coerce the string (from JSON) into a number
-     * and apply numeric validation.
-     */
+  /**
+   * 'liters' is a decimal, which drizzle-zod maps to a string.
+   * We override it to coerce the string (from JSON) into a number
+   * and apply numeric validation.
+   */
 
-    liters: z.coerce
-        .number({
-            error: 'Liters must be a valid number.',
-        })
-        .positive({ message: 'Liters must be greater than 0.' })
-        .multipleOf(0.01, { message: 'Liters cannot have more than 2 decimal places.' })
-        .max(99999999.99, { message: 'Liters value is too large.' }),
+  liters: z.coerce
+    .number({
+      error: "Liters must be a valid number.",
+    })
+    .positive({ message: "Liters must be greater than 0." })
+    .multipleOf(0.01, {
+      message: "Liters cannot have more than 2 decimal places.",
+    })
+    .max(99999999.99, { message: "Liters value is too large." }),
 
-    farmer_id: z.coerce
-        .number({
-            error: 'Farmer ID must be a number.',
-        })
-        .int({ message: 'Farmer ID must be an integer.' })
-        .positive({ message: 'A valid Farmer ID is required.' }),
-
+  farmer_id: z.coerce
+    .number({
+      error: "Farmer ID must be a number.",
+    })
+    .int({ message: "Farmer ID must be an integer." })
+    .positive({ message: "A valid Farmer ID is required." }),
 }).omit({
-    recorded_by_collection_id: true,
+  recorded_by_collection_id: true,
 });
 
 /**
@@ -85,8 +88,6 @@ export const insertMilkRecordSchema = createInsertSchema(milkRecordsTable, {
  * Use this to validate data when **selecting** or returning a milk record.
  */
 export const selectMilkRecordSchema = createSelectSchema(milkRecordsTable);
-
-
 
 // ------------------------------------------------------------------
 // 3. TYPESCRIPT TYPES (Derived from Zod Schemas)
@@ -101,8 +102,3 @@ export type MilkRecord = z.infer<typeof selectMilkRecordSchema>;
  * Represents the data needed to create a new milk record.
  */
 export type NewMilkRecord = z.infer<typeof insertMilkRecordSchema>;
-
-
-
-
-
