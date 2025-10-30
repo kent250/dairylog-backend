@@ -16,6 +16,7 @@ import { ApiResponse } from "../utils/api-response.js";
 import { asyncHandler } from "../utils/syncHandler.js";
 
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { sendScheduledSms } from "../services/sms.service.js";
 
 /**
  * Zod schema for validating query parameters when listing farmers.
@@ -153,6 +154,12 @@ export const createFarmer = asyncHandler(
         "Failed to create farmer record."
       );
     }
+
+    //send SMS
+    sendScheduledSms({
+      content: `Hello, ${validatedData.farmer_name}, You have been registered into ${req.user?.collection_name} as Milk Supprier`,
+      to: validatedData.phone_number,
+    });
 
     return ApiResponse.created(
       res,
