@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   username: varchar("username").unique().notNull(),
   email: varchar("email").notNull().unique(),
   phone_number: varchar("phone_number", { length: 50 }),
-  password: text("password").notNull().unique(),
+  password: text("password").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

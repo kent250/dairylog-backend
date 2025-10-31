@@ -50,6 +50,13 @@
       "when": 1761827387817,
       "tag": "0006_add-price_per_liter_column_to_milk_records",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1761923607930,
+      "tag": "0007_remove-unique-constrait-on-password-column",
+      "breakpoints": true
     }
   ]
 }

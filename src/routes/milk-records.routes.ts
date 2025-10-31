@@ -94,6 +94,18 @@ const router = Router();
  *                 timestamp: "2025-10-26T18:27:40.445Z"
  *                 statusCode: 404
  *
+ *       409:
+ *         description: Conflict - Farmer has already delivered milk today.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "RESOURCE_CONFLICT"
+ *                 message: "Farmer with ID 8 has already delivered milk today."
+ *                 timestamp: "2025-10-31T15:10:48.017Z"
+ *                 statusCode: 409
+ *
  *       500:
  *         description: Internal server error.
  *         content:
@@ -113,7 +125,15 @@ router.post("/", recordMilkDelivery);
  * /milk-record:
  *   get:
  *     summary: Get all milk records for the authenticated collection center
- *     description: Retrieves milk delivery records filtered by optional parameters such as farmer, date range, and sorting. Supports pagination.
+ *     description: |
+ *       Retrieves milk delivery records filtered by optional parameters such as farmer, date range, and sorting. 
+ *       Supports pagination. 
+ *       
+ *       **Date Filter Behavior:**
+ *       - If no date filters provided, defaults to today's records (00:00:00 to 23:59:59)
+ *       - If only startDate provided, endDate is set to end of that day (23:59:59)
+ *       - If only endDate provided, startDate is set to beginning of that day (00:00:00)
+ *       - If both provided, endDate is adjusted to end of day (23:59:59)
  *     tags:
  *       - Milk Records
  *     security:
@@ -128,7 +148,7 @@ router.post("/", recordMilkDelivery);
  *           example: 5
  *       - name: startDate
  *         in: query
- *         description: Filter records from this date (inclusive).
+ *         description: Filter records from this date (inclusive, defaults to 00:00:00 if time not specified).
  *         required: false
  *         schema:
  *           type: string
@@ -136,7 +156,7 @@ router.post("/", recordMilkDelivery);
  *           example: "2025-10-01"
  *       - name: endDate
  *         in: query
- *         description: Filter records up to this date (inclusive).
+ *         description: Filter records up to this date (inclusive, adjusted to 23:59:59).
  *         required: false
  *         schema:
  *           type: string
@@ -144,33 +164,38 @@ router.post("/", recordMilkDelivery);
  *           example: "2025-10-26"
  *       - name: page
  *         in: query
- *         description: Page number for pagination.
+ *         description: Page number for pagination (default is 1).
  *         required: false
  *         schema:
  *           type: integer
+ *           default: 1
  *           example: 1
  *       - name: limit
  *         in: query
- *         description: Number of results per page (max 100).
+ *         description: Number of results per page (max 100, default is 15).
  *         required: false
  *         schema:
  *           type: integer
+ *           default: 15
+ *           maximum: 100
  *           example: 10
  *       - name: sortBy
  *         in: query
- *         description: Field to sort by.
+ *         description: Field to sort by (default is recordedAt).
  *         required: false
  *         schema:
  *           type: string
  *           enum: [recordedAt, liters, farmerName]
+ *           default: recordedAt
  *           example: recordedAt
  *       - name: sortOrder
  *         in: query
- *         description: Sort direction.
+ *         description: Sort direction (default is desc).
  *         required: false
  *         schema:
  *           type: string
  *           enum: [asc, desc]
+ *           default: desc
  *           example: desc
  *
  *     responses:
@@ -194,12 +219,15 @@ router.post("/", recordMilkDelivery);
  *                         example: 14
  *                       liters:
  *                         type: number
+ *                         format: float
  *                         example: 25
  *                       price_per_liter:
  *                         type: number
+ *                         format: float
  *                         example: 250
  *                       recordedAt:
  *                         type: string
+ *                         format: date-time
  *                         example: "2025-10-26T21:19:17.771Z"
  *                       farmer:
  *                         type: object
@@ -209,10 +237,10 @@ router.post("/", recordMilkDelivery);
  *                             example: 1
  *                           name:
  *                             type: string
- *                             example: Jean Bosco Nkurunziza
+ *                             example: "Jean Bosco Nkurunziza"
  *                           phoneNumber:
  *                             type: string
- *                             example: 0788123456
+ *                             example: "0788123456"
  *                 meta:
  *                   type: object
  *                   properties:
@@ -227,13 +255,24 @@ router.post("/", recordMilkDelivery);
  *                       example: 10
  *                     total:
  *                       type: integer
+ *                       description: Total number of records matching the filter criteria
  *                       example: 25
  *                     timestamp:
  *                       type: string
+ *                       format: date-time
  *                       example: "2025-10-26T21:19:17.813Z"
  *                 message:
  *                   type: string
- *                   example: Milk records retrieved successfully.
+ *                   example: "Milk records retrieved successfully."
+ *                 summary:
+ *                   type: object
+ *                   description: Summary statistics for the current page of records
+ *                   properties:
+ *                     returnedRecordTotalLiters:
+ *                       type: number
+ *                       format: float
+ *                       description: Sum of liters for records returned on the current page
+ *                       example: 250
  *
  *       400:
  *         description: Invalid query parameter.
@@ -243,7 +282,7 @@ router.post("/", recordMilkDelivery);
  *               success: false
  *               error:
  *                 code: "VALIDATION_ERROR"
- *                 message: "Invalid query parameters."
+ *                 message: "End date cannot be before start date."
  *                 timestamp: "2025-10-26T18:25:58.607Z"
  *                 statusCode: 400
  *
@@ -255,12 +294,10 @@ router.post("/", recordMilkDelivery);
  *               success: false
  *               error:
  *                 code: "UNAUTHORIZED"
- *                 message: "Unauthorized: Access token is missing"
+ *                 message: "User ID not found in token payload."
  *                 timestamp: "2025-10-26T18:26:19.337Z"
  *                 statusCode: 401
  *
- *       404:
- *         description: No records found for the given filters.
  *       500:
  *         description: Internal server error.
  *         content:

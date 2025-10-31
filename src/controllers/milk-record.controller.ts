@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import { eq, and, gte, lte, desc, asc, count } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, count, sum } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "../db/index.js";
@@ -26,6 +26,7 @@ import { sendScheduledSms } from "../services/sms.service.js";
  *
  * @throws {AppError} UNAUTHORIZED - If the logged-in user ID is missing from token.
  * @throws {AppError} VALIDATION_ERROR - If request body fails validation.
+ * @throws {AppError} RESOURCE_CONFLICT - If farmer has already delivered milk today.
  * @throws {AppError} NOT_FOUND - If the farmer does not exist or does not belong to the collection center.
  * @throws {AppError} INTERNAL_ERROR - If the milk record fails to be inserted.
  *
@@ -72,6 +73,30 @@ export const recordMilkDelivery = asyncHandler(
         throw new AppError(
           ERROR_CODES.NOT_FOUND,
           `Farmer with ID ${farmer_id} not found or does not belong to this collection center.`
+        );
+      }
+
+      // Check if farmer has already delivered today
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+      const todayDeliveryCheck = await trx
+        .select({ id: milkRecordsTable.id })
+        .from(milkRecordsTable)
+        .where(
+          and(
+            eq(milkRecordsTable.farmer_id, farmer_id),
+            gte(milkRecordsTable.recordedAt, todayStart),
+            lte(milkRecordsTable.recordedAt, todayEnd)
+          )
+        )
+        .limit(1);
+
+      if (todayDeliveryCheck.length > 0) {
+        throw new AppError(
+          ERROR_CODES.RESOURCE_CONFLICT,
+          `Farmer with ID ${farmer_id} has already delivered milk today.`
         );
       }
 
@@ -182,10 +207,8 @@ export const recordMilkDelivery = asyncHandler(
 const listMilkRecordsQuerySchema = z
   .object({
     farmerId: z.coerce.number().int().positive().optional(),
-    // Date validation (expects ISO 8601 format like YYYY-MM-DD or full timestamp)
     startDate: z.coerce.date().optional(),
     endDate: z.coerce.date().optional(),
-    // Pagination and Sorting
     page: z.coerce.number().int().positive().optional().default(1),
     limit: z.coerce.number().int().positive().max(100).optional().default(15),
     sortBy: z
@@ -207,53 +230,61 @@ const listMilkRecordsQuerySchema = z
     }
   );
 
-/**
- * Retrieves all milk records associated with the authenticated collection center user.
- *
- * Supports optional filtering by farmer, date range, pagination, and sorting.
- *
- * @async
- * @function getMilkRecordsForUser
- * @param {AuthenticatedRequest} req - Express request object, containing the authenticated user's ID and query parameters.
- * @param {Response} res - Express response object used to send the paginated list of milk records.
- * @throws {AppError} Throws an UNAUTHORIZED error if the user is not authenticated.
- * @throws {AppError} Throws a VALIDATION_ERROR if query parameters fail validation.
- * @returns {Promise<void>} Sends a paginated list of milk records with metadata.
- *
- * @example
- * // Example request:
- * GET /api/milk-record?farmerId=5&startDate=2025-10-01&endDate=2025-10-26&page=1&limit=10&sortBy=liters&sortOrder=asc
- *
- * // Example response:
- * {
- *   "success": true,
- *   "data": [
- *     {
- *       "recordId": 14,
- *       "liters": 25,
- *       "price_per_liter": 25,
- *       "recordedAt": "2025-10-26T21:19:17.771Z",
- *       "farmer": {
- *         "id": 1,
- *         "name": "Jean Bosco Nkurunziza",
- *         "phoneNumber": "0788123456"
- *       }
- *     }
- *   ],
- *   "meta": {
- *     "currentPage": 1,
- *     "totalPages": 3,
- *     "limit": 10,
- *     "total": 25,
- *     "timestamp": "2025-10-26T21:19:17.813Z"
- *   },
- *   "message": "Milk records retrieved successfully."
- * }
- */
 
+/**
+* Retrieves all milk records associated with the authenticated collection center user.
+*
+* Supports optional filtering by farmer, date range, pagination, and sorting.
+* If no date filters are provided, defaults to today's records.
+* If only startDate is provided, endDate is set to end of that day.
+* If only endDate is provided, startDate is set to beginning of that day.
+*
+* @async
+* @function getMilkRecordsForUser
+* @param {AuthenticatedRequest} req - Express request object, containing the authenticated user's ID and query parameters.
+* @param {Response} res - Express response object used to send the paginated list of milk records.
+* @throws {AppError} Throws an UNAUTHORIZED error if the user is not authenticated.
+* @throws {AppError} Throws a VALIDATION_ERROR if query parameters fail validation.
+* @returns {Promise<void>} Sends a paginated list of milk records with metadata and summary statistics.
+*
+* @example
+* // Example request with all parameters:
+* GET /api/milk-record?farmerId=5&startDate=2025-10-01&endDate=2025-10-26&page=1&limit=10&sortBy=liters&sortOrder=asc
+*
+* // Example request with no date filters (defaults to today):
+* GET /api/milk-record?page=1&limit=10
+*
+* // Example response:
+* {
+*   "success": true,
+*   "data": [
+*     {
+*       "recordId": 14,
+*       "liters": 25,
+*       "price_per_liter": 25,
+*       "recordedAt": "2025-10-26T21:19:17.771Z",
+*       "farmer": {
+*         "id": 1,
+*         "name": "Jean Bosco Nkurunziza",
+*         "phoneNumber": "0788123456"
+*       }
+*     }
+*   ],
+*   "meta": {
+*     "currentPage": 1,
+*     "totalPages": 3,
+*     "limit": 10,
+*     "total": 25,
+*     "timestamp": "2025-10-26T21:19:17.813Z"
+*   },
+*   "message": "Milk records retrieved successfully.",
+*   "summary": {
+*     "returnedRecordTotalLiters": 250
+*   }
+* }
+*/
 export const getMilkRecordsForUser = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    // 1. Get logged-in user ID from middleware
     const loggedInUserId = req.user?.userId;
     if (!loggedInUserId) {
       throw new AppError(
@@ -267,16 +298,40 @@ export const getMilkRecordsForUser = asyncHandler(
       const formattedFirstZodError = getFirstZodErrorMessage(
         queryValidation.error
       );
-
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, formattedFirstZodError);
     }
 
     const { farmerId, startDate, endDate, page, limit, sortBy, sortOrder } =
       queryValidation.data;
 
+    // Default to today if no date filters provided
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    // Ensure dates are always defined
+    let finalStartDate: Date;
+    let finalEndDate: Date;
+
+    if (!startDate && !endDate) {
+      finalStartDate = todayStart;
+      finalEndDate = todayEnd;
+    } else if (startDate && !endDate) {
+      finalStartDate = startDate;
+      finalEndDate = new Date(startDate);
+      finalEndDate.setHours(23, 59, 59, 999);
+    } else if (!startDate && endDate) {
+      finalStartDate = new Date(endDate);
+      finalStartDate.setHours(0, 0, 0, 0);
+      finalEndDate = endDate;
+    } else {
+      finalStartDate = startDate!;
+      finalEndDate = new Date(endDate!);
+      finalEndDate.setHours(23, 59, 59, 999);
+    }
+
     const offset = (page - 1) * limit;
 
-    // Map sortBy to actual table columns/joins safely
     const sortColumn = {
       recordedAt: milkRecordsTable.recordedAt,
       liters: milkRecordsTable.liters,
@@ -287,58 +342,55 @@ export const getMilkRecordsForUser = asyncHandler(
 
     const conditions = [
       eq(milkRecordsTable.recorded_by_collection_id, loggedInUserId),
+      gte(milkRecordsTable.recordedAt, finalStartDate),
+      lte(milkRecordsTable.recordedAt, finalEndDate),
     ];
 
     if (farmerId) {
       conditions.push(eq(milkRecordsTable.farmer_id, farmerId));
     }
-    if (startDate) {
-      conditions.push(gte(milkRecordsTable.recordedAt, startDate));
-    }
 
-    if (endDate) {
-      const adjustedEndDate = new Date(endDate);
-      adjustedEndDate.setHours(23, 59, 59, 999);
-      conditions.push(lte(milkRecordsTable.recordedAt, adjustedEndDate));
-    }
+    const [records, statsResult] = await Promise.all([
+      db
+        .select({
+          recordId: milkRecordsTable.id,
+          liters: milkRecordsTable.liters,
+          price_per_liter: milkRecordsTable.price_per_liter,
+          recordedAt: milkRecordsTable.recordedAt,
+          farmer: {
+            id: farmersTable.id,
+            name: farmersTable.farmer_name,
+            phoneNumber: farmersTable.phone_number,
+          },
+        })
+        .from(milkRecordsTable)
+        .innerJoin(farmersTable, eq(milkRecordsTable.farmer_id, farmersTable.id))
+        .where(and(...conditions))
+        .orderBy(sortDirection(sortColumn))
+        .limit(limit)
+        .offset(offset),
 
-    // --- Build Query ---
-    const query = db
-      .select({
-        recordId: milkRecordsTable.id,
-        liters: milkRecordsTable.liters,
-        price_per_liter: milkRecordsTable.price_per_liter,
-        recordedAt: milkRecordsTable.recordedAt,
-        farmer: {
-          id: farmersTable.id,
-          name: farmersTable.farmer_name,
-          phoneNumber: farmersTable.phone_number,
-        },
-      })
-      .from(milkRecordsTable)
-      .innerJoin(farmersTable, eq(milkRecordsTable.farmer_id, farmersTable.id))
-      .where(and(...conditions))
-      .orderBy(sortDirection(sortColumn))
-      .limit(limit)
-      .offset(offset);
+      db
+        .select({
+          totalCount: count(),
+          totalLiters: sum(milkRecordsTable.liters),
+        })
+        .from(milkRecordsTable)
+        .where(and(...conditions)),
+    ]);
 
-    // Fetch the records
-    const records = await query;
-
-    // Format decimal fields to numbers, removing trailing zeros
     const formattedRecords = records.map((record) => ({
       ...record,
       liters: parseFloat(record.liters),
       price_per_liter: parseFloat(record.price_per_liter),
     }));
 
-    // Fetch total count with the same filters
-    const totalResult = await db
-      .select({ value: count() })
-      .from(milkRecordsTable)
-      .where(and(...conditions));
+    const currentPageTotalLiters = formattedRecords.reduce(
+      (sum, record) => sum + record.liters,
+      0
+    );
 
-    const totalRecords = totalResult[0]?.value ?? 0;
+    const totalRecords = statsResult[0]?.totalCount ?? 0;
     const totalPages = Math.ceil(totalRecords / limit);
 
     return ApiResponse.paginated(
@@ -350,7 +402,12 @@ export const getMilkRecordsForUser = asyncHandler(
         limit: limit,
         total: totalRecords,
       },
-      "Milk records retrieved successfully."
+      "Milk records retrieved successfully.",
+      {
+        summary: {
+          returnedRecordTotalLiters: currentPageTotalLiters,
+        },
+      }
     );
   }
 );
