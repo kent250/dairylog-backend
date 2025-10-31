@@ -345,10 +345,7 @@ router.get("/", getMilkRecordsForUser);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
+ *                 records:
  *                   type: array
  *                   items:
  *                     type: object
@@ -366,6 +363,9 @@ router.get("/", getMilkRecordsForUser);
  *                         type: string
  *                         format: date-time
  *                         example: "2025-10-26T15:51:40.422Z"
+ *                 totalLitersDeliveredByFarmer:
+ *                   type: number
+ *                   example: 125.5
  *                 message:
  *                   type: string
  *                   example: Milk records retrieved successfully.

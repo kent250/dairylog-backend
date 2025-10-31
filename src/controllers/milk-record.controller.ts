@@ -498,7 +498,7 @@ export const getFarmerMilkRecordHistory = asyncHandler(
 
     const responseData = {
       records: formattedRecords,
-      totalLiters,
+      totalLitersDeliveredByFarmer: totalLiters,
     };
 
     return ApiResponse.ok(
