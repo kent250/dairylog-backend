@@ -24,32 +24,6 @@ interface SuccessResponseOptions {
 
 /**
  * Sends a standardized success response
- *
- * @param res - Express response object
- * @param data - Response data payload
- * @param options - Optional configuration (message, status code, metadata)
- *
- * @example
- * // Simple success response
- * return sendSuccess(res, { id: 1, name: 'John' });
- *
- * @example
- * // With custom message and status code
- * return sendSuccess(res, user, {
- *   message: 'User created successfully',
- *   statusCode: 201
- * });
- *
- * @example
- * // With pagination metadata
- * return sendSuccess(res, users, {
- *   message: 'Users retrieved',
- *   meta: {
- *     page: 1,
- *     limit: 10,
- *     total: 100
- *   }
- * });
  */
 export const sendSuccess = <T>(
   res: Response,
@@ -97,6 +71,22 @@ export const ApiResponse = {
 
   /**
    * Paginated response helper
+   * 
+   * @param additionalMeta - Optional additional metadata (e.g., summary, aggregations)
+   * 
+   * @example
+   * // Simple pagination
+   * ApiResponse.paginated(res, records, { currentPage: 1, limit: 20, total: 100 });
+   * 
+   * @example
+   * // With summary data
+   * ApiResponse.paginated(
+   *   res, 
+   *   records, 
+   *   { currentPage: 1, limit: 20, total: 100 },
+   *   'Records retrieved',
+   *   { summary: { totalLiters: 1234.5 } }
+   * );
    */
   paginated: <T>(
     res: Response,
@@ -107,7 +97,8 @@ export const ApiResponse = {
       total: number;
       totalPages?: number;
     },
-    message?: string
+    message?: string,
+    additionalMeta?: Record<string, unknown>
   ) => {
     const totalPages =
       pagination.totalPages ?? Math.ceil(pagination.total / pagination.limit);
@@ -122,6 +113,7 @@ export const ApiResponse = {
           hasNext: pagination.currentPage < totalPages,
           hasPrev: pagination.currentPage > 1,
         },
+        ...additionalMeta, // Additional metadata like summary, aggregations, etc.
       },
     });
   },
