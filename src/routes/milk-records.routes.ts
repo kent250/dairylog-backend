@@ -2,7 +2,9 @@ import { Router } from "express";
 import {
   recordMilkDelivery,
   getMilkRecordsForUser,
+  getFarmerMilkRecordHistory
 } from "../controllers/milk-record.controller.js";
+
 const router = Router();
 
 /**
@@ -311,5 +313,118 @@ router.post("/", recordMilkDelivery);
  *                 statusCode: 500
  */
 router.get("/", getMilkRecordsForUser);
+
+
+
+/**
+ * @swagger
+ * /milk-record/farmer-history:
+ *   get:
+ *     summary: Get milk record history for a farmer
+ *     description: >
+ *       Retrieves all milk delivery records for a farmer identified by phone number,
+ *       scoped to the authenticated collection center.  
+ *       Requires a valid JWT access token.
+ *     tags:
+ *       - Milk Records
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "0788123456"
+ *         description: The farmer's phone number to look up milk records for.
+ *     responses:
+ *       200:
+ *         description: Milk records retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       liters:
+ *                         type: number
+ *                         example: 12.5
+ *                       price_per_liter:
+ *                         type: number
+ *                         example: 450
+ *                       recordedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-26T15:51:40.422Z"
+ *                 message:
+ *                   type: string
+ *                   example: Milk records retrieved successfully.
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-10-26T18:17:54.713Z"
+ *
+ *       400:
+ *         description: Invalid or missing query parameter.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "VALIDATION_ERROR"
+ *                 message: "Invalid query parameters."
+ *                 timestamp: "2025-10-26T18:25:58.607Z"
+ *                 statusCode: 400
+ *
+ *       401:
+ *         description: Unauthorized — missing or invalid authentication token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "UNAUTHORIZED"
+ *                 message: "Unauthorized: Access token is missing"
+ *                 timestamp: "2025-10-26T18:26:19.337Z"
+ *                 statusCode: 401
+ *
+ *       404:
+ *         description: Farmer not found for provided phone number.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "NOT_FOUND"
+ *                 message: "Farmer with phone number 0783741533 not found."
+ *                 timestamp: "2025-10-26T18:27:40.445Z"
+ *                 statusCode: 404
+ *
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "INTERNAL_SERVER_ERROR"
+ *                 message: "Something went wrong."
+ *                 timestamp: "2025-10-26T18:30:00.000Z"
+ *                 statusCode: 500
+ */
+router.get('/farmer-history', getFarmerMilkRecordHistory);
 
 export default router;

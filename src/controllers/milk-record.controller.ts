@@ -411,3 +411,101 @@ export const getMilkRecordsForUser = asyncHandler(
     );
   }
 );
+
+
+
+
+
+
+
+/**
+ * Zod schema for validating query parameters when looking up a farmer by phone number.
+ *
+ * @property {string} phone - Required phone number of the farmer to search for. Must be at least 1 character long.
+ *
+ */
+const lookupQuerySchema = z.object({
+  phone: z
+    .string()
+    .min(1, { message: "Phone number query parameter is required." }),
+});
+
+
+export const getFarmerMilkRecordHistory = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+
+    // 1. Get logged-in user ID from middleware
+    const loggedInUserId = req.user?.userId;
+    if (!loggedInUserId) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "User ID not found in token payload."
+      );
+    }
+
+    // Validate query parameters
+    const queryValidation = lookupQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid query parameters."
+      );
+    }
+
+    const { phone } = queryValidation.data;
+
+    // Query for the farmer matching the phone number AND the logged-in user's ID
+    const foundFarmers = await db
+      .select({
+        id: farmersTable.id,
+      })
+      .from(farmersTable)
+      .where(
+        and(
+          eq(farmersTable.collection_center_id, loggedInUserId),
+          eq(farmersTable.phone_number, phone)
+        )
+      )
+      .limit(1);
+
+    if (foundFarmers.length === 0) {
+      throw new AppError(
+        ERROR_CODES.NOT_FOUND,
+        `Farmer with phone number ${phone} not found.`
+      );
+    }
+
+
+    const records = await db.query.milkRecordsTable.findMany({
+      columns: {
+        id: true,
+        liters: true,
+        price_per_liter: true,
+        recordedAt: true,
+      },
+      where: eq(milkRecordsTable.farmer_id, foundFarmers[0].id),
+      orderBy: [desc(milkRecordsTable.recordedAt)],
+    });
+
+
+    const formattedRecords = records.map((record) => ({
+      ...record,
+      liters: parseFloat(record.liters),
+      price_per_liter: parseFloat(record.price_per_liter),
+    }));
+
+    const totalLiters = formattedRecords.reduce((acc, r) => acc + r.liters, 0);
+
+    const responseData = {
+      records: formattedRecords,
+      totalLiters,
+    };
+
+    return ApiResponse.ok(
+      res,
+      responseData,
+      "Milk records retrieved successfully.",
+    );
+
+  }
+);    
