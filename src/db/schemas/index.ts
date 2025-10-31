@@ -16,7 +16,7 @@ export const schema = {
 };
 
 // We also re-export the types for convenience
-export * from "./user.schema";
-export * from "./farmer.schema";
-export * from "./refresh-token.schema";
-export * from "./milk-record.schema";
+export * from "./user.schema.js";
+export * from "./farmer.schema.js";
+export * from "./refresh-token.schema.js";
+export * from "./milk-record.schema.js";
