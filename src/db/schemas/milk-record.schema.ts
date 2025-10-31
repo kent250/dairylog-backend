@@ -17,6 +17,11 @@ export const milkRecordsTable = pgTable("milk_records", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1 }),
 
   liters: decimal("liters", { precision: 10, scale: 2 }).notNull(),
+  price_per_liter: decimal("price_per_liter", {
+    precision: 10,
+    scale: 3,
+  }).notNull(),
+
   farmer_id: integer("farmer_id")
     .notNull()
     .references(() => farmersTable.id, { onDelete: "restrict" }),
@@ -70,6 +75,15 @@ export const insertMilkRecordSchema = createInsertSchema(milkRecordsTable, {
     .positive({ message: "Liters must be greater than 0." })
     .multipleOf(0.01, {
       message: "Liters cannot have more than 2 decimal places.",
+    })
+    .max(99999999.99, { message: "Liters value is too large." }),
+  price_per_liter: z.coerce
+    .number({
+      error: "Price per litre must be a valid number.",
+    })
+    .positive({ message: "Price per litre must be greater than 0." })
+    .multipleOf(0.01, {
+      message: "Liters cannot have more than 3 decimal places.",
     })
     .max(99999999.99, { message: "Liters value is too large." }),
 

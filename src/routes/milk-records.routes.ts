@@ -30,7 +30,10 @@ const router = Router();
  *                 example: 12
  *               liters:
  *                 type: string
- *                 example: "25.00"
+ *                 example: "25"
+ *               price_per_liter:
+ *                 type: string
+ *                 example: "250"
  *     responses:
  *       201:
  *         description: Milk recorded successfully.
@@ -52,8 +55,11 @@ const router = Router();
  *                       type: integer
  *                       example: 1
  *                     liters:
- *                       type: string
- *                       example: "25.00"
+ *                       type: number
+ *                       example: 25
+ *                     price_per_liter:
+ *                       type: number
+ *                       example: 250
  *                     recordedAt:
  *                       type: string
  *                       format: date-time
@@ -187,8 +193,11 @@ router.post("/", recordMilkDelivery);
  *                         type: integer
  *                         example: 14
  *                       liters:
- *                         type: string
- *                         example: "25.00"
+ *                         type: number
+ *                         example: 25
+ *                       price_per_liter:
+ *                         type: number
+ *                         example: 250
  *                       recordedAt:
  *                         type: string
  *                         example: "2025-10-26T21:19:17.771Z"

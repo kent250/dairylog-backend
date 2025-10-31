@@ -1,0 +1,1 @@
+ALTER TABLE "milk_records" ADD COLUMN "price_per_liter" numeric(10, 3) NOT NULL;

@@ -43,6 +43,13 @@
       "when": 1761825351872,
       "tag": "0005_add-phone-number-column-on-users-table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1761827387817,
+      "tag": "0006_add-price_per_liter_column_to_milk_records",
+      "breakpoints": true
     }
   ]
 }

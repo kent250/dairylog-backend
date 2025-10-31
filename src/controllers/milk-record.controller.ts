@@ -54,7 +54,7 @@ export const recordMilkDelivery = asyncHandler(
       throw new AppError(ERROR_CODES.VALIDATION_ERROR, formattedFirstZodError);
     }
 
-    const { farmer_id, liters } = validationResult.data;
+    const { farmer_id, liters, price_per_liter } = validationResult.data;
     const responseObject = await db.transaction(async (trx) => {
       // Verify farmer exists and belongs to this collection center
       const farmerCheck = await trx
@@ -80,6 +80,7 @@ export const recordMilkDelivery = asyncHandler(
         .insert(milkRecordsTable)
         .values({
           farmer_id,
+          price_per_liter: price_per_liter.toString(),
           liters: liters.toString(),
           recorded_by_collection_id: loggedInUserId,
         })
@@ -98,6 +99,7 @@ export const recordMilkDelivery = asyncHandler(
         columns: {
           id: true,
           farmer_id: true,
+          price_per_liter: true,
           liters: true,
           recordedAt: true,
         },
@@ -111,7 +113,18 @@ export const recordMilkDelivery = asyncHandler(
         },
       });
 
-      return record;
+      if (!record) {
+        throw new AppError(
+          ERROR_CODES.INTERNAL_ERROR,
+          "Failed to retrieve milk record after insertion."
+        );
+      }
+
+      return {
+        ...record,
+        price_per_liter: parseFloat(record.price_per_liter),
+        liters: parseFloat(record.liters),
+      };
     });
 
     if (!responseObject) {
@@ -161,7 +174,7 @@ export const recordMilkDelivery = asyncHandler(
  *   startDate: "2025-10-01",
  *   endDate: "2025-10-26",
  *   page: 1,
- *   limit: 20,
+ *   limit: 15,
  *   sortBy: "liters",
  *   sortOrder: "asc"
  * }
@@ -174,7 +187,7 @@ const listMilkRecordsQuerySchema = z
     endDate: z.coerce.date().optional(),
     // Pagination and Sorting
     page: z.coerce.number().int().positive().optional().default(1),
-    limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    limit: z.coerce.number().int().positive().max(100).optional().default(15),
     sortBy: z
       .enum(["recordedAt", "liters", "farmerName"])
       .optional()
@@ -217,7 +230,8 @@ const listMilkRecordsQuerySchema = z
  *   "data": [
  *     {
  *       "recordId": 14,
- *       "liters": "25.00",
+ *       "liters": 25,
+ *       "price_per_liter": 25,
  *       "recordedAt": "2025-10-26T21:19:17.771Z",
  *       "farmer": {
  *         "id": 1,
@@ -293,6 +307,7 @@ export const getMilkRecordsForUser = asyncHandler(
       .select({
         recordId: milkRecordsTable.id,
         liters: milkRecordsTable.liters,
+        price_per_liter: milkRecordsTable.price_per_liter,
         recordedAt: milkRecordsTable.recordedAt,
         farmer: {
           id: farmersTable.id,
@@ -310,6 +325,13 @@ export const getMilkRecordsForUser = asyncHandler(
     // Fetch the records
     const records = await query;
 
+    // Format decimal fields to numbers, removing trailing zeros
+    const formattedRecords = records.map((record) => ({
+      ...record,
+      liters: parseFloat(record.liters),
+      price_per_liter: parseFloat(record.price_per_liter),
+    }));
+
     // Fetch total count with the same filters
     const totalResult = await db
       .select({ value: count() })
@@ -321,7 +343,7 @@ export const getMilkRecordsForUser = asyncHandler(
 
     return ApiResponse.paginated(
       res,
-      records,
+      formattedRecords,
       {
         currentPage: page,
         totalPages: totalPages,
