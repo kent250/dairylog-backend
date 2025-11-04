@@ -155,9 +155,12 @@ export const createFarmer = asyncHandler(
       );
     }
 
+    const farmerName = validatedData.farmer_name;
+    const firstName = farmerName.split(" ")[0];
+
     //send SMS
     sendScheduledSms({
-      content: `Hello, ${validatedData.farmer_name}, You have been registered into ${req.user?.collection_name} as Milk Supprier`,
+      content: `Hello, ${firstName}, You have been registered into ${req.user?.collection_name} as Milk Supplier`,
       to: validatedData.phone_number,
     });
 
