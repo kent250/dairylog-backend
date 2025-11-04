@@ -160,12 +160,21 @@ export const recordMilkDelivery = asyncHandler(
     }
 
     const farmerPhoneNumber = responseObject.farmer.phone_number;
+
+    const farmerName = responseObject.farmer.farmer_name;
+    const firstName = farmerName.split(" ")[0];
+
     const litersRecord = responseObject.liters;
+    const formattedLiters = Number(litersRecord);
+
+    const pricePerLiterSold = responseObject.price_per_liter;
+    const formattedPrice = Number(pricePerLiterSold);
+
     const recordedAt = responseObject.recordedAt.toDateString();
 
     //send SMS
     sendScheduledSms({
-      content: `${litersRecord} has been recorded, Today ${recordedAt}`,
+      content: `Hello ${firstName}, ${formattedLiters} liters has been recorded Today on ${recordedAt} at ${formattedPrice} per liter.`,
       to: farmerPhoneNumber,
     });
 
