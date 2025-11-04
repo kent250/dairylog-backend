@@ -184,7 +184,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   };
 
   const accessToken = jwt.sign(accessTokenPayload, accessSecret, {
-    expiresIn: "15m",
+    expiresIn: "3600m",
   });
 
   // Refresh Token (long-lived, random string, store hashed version)
