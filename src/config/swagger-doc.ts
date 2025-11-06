@@ -10,10 +10,10 @@ const options: swaggerJsdoc.Options = {
             version: '1.0.0',
             description:
                 'Express.js + TypeScript backend server for the DairyLog app. Handles JWT authentication, farmer management, and milk collection data using driizzle and PostgreSQL.',
-            // contact: {
-            //     name: "DairyLog Support",
-            //     email: "@irumva.codes"
-            // }
+            contact: {
+                name: "Irumva Shumbusho",
+                email: "irumvashumbusho@gmail.com"
+            }
         },
         servers: [
             {
