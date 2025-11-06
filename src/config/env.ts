@@ -13,9 +13,9 @@ import { getFirstZodErrorMessage } from "../utils/error-utils/error-helpers.js";
 function loadEnvFile() {
   const nodeEnv = process.env.NODE_ENV || "development";
 
-  if (nodeEnv === "production") {
+  if (nodeEnv === "production" || process.env.CI === "true") {
     console.log(
-      "✓ Running in production - using platform environment variables."
+      `✓ Running in ${nodeEnv} (CI=${process.env.CI}) - using platform environment variables.`
     );
     return;
   }
@@ -43,7 +43,7 @@ loadEnvFile();
 const envSchema = z.object({
   // --- Application Environment ---
   NODE_ENV: z
-    .enum(["development", "staging", "production"])
+    .enum(["development", "staging", "production", "test"])
     .default("development"),
   SERVER_PORT: z.coerce.number().int().positive().default(3000),
   API_BASE_URL: z.string().url().default("http://localhost:3000"),
@@ -70,7 +70,7 @@ const envSchema = z.object({
     .string()
     .min(32, "JWT_REFRESH_SECRET must be at least 32 characters long"),
 
-  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10), // Min 10 rounds recommended
+  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(12).max(14),
 
   // --- CORS ---
   // Transforms comma-separated strings into arrays, handles undefined/empty strings
@@ -80,9 +80,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_STAGING: z
@@ -91,9 +91,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_DEVELOPMENT: z
@@ -102,9 +102,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
         : []
     ),
   CORS_ORIGINS_LOCAL: z
@@ -113,9 +113,9 @@ const envSchema = z.object({
     .transform((val) =>
       val
         ? val
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
         : ["http://localhost:3000", "http://127.0.0.1:3000"]
     ),
 });
@@ -155,6 +155,7 @@ function determineCorsOrigins(): string[] {
       CORS_ORIGINS_DEVELOPMENT.length > 0
         ? CORS_ORIGINS_DEVELOPMENT
         : CORS_ORIGINS_LOCAL,
+    test: CORS_ORIGINS_LOCAL
   };
 
   const selectedOrigins = originsMap[NODE_ENV];
@@ -201,7 +202,6 @@ export const config = {
 } as const;
 
 console.log(
-  `✓ CORS Origins for ${config.environment}: ${
-    config.corsOrigins.join(", ") || "[]"
+  `✓ CORS Origins for ${config.environment}: ${config.corsOrigins.join(", ") || "[]"
   }`
 );
