@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { config } from "../config/env.js";
-import { formatRwandanPrefix } from "../utils/phone-number-util.js";
+import { formatRwandanPhoneNumber } from "../utils/phone-number-util.js";
 
 import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
 import { AppError } from "../utils/error-utils/AppError.js";
@@ -34,7 +34,7 @@ export async function sendScheduledSms(params: SendSmsParams): Promise<void> {
     throw new AppError(ERROR_CODES.BAD_REQUEST, "SMS content cannot be empty");
   }
 
-  const formatedPhone = formatRwandanPrefix(params.to);
+  const formatedPhone = formatRwandanPhoneNumber(params.to);
 
   if (!formatedPhone || !/^\+[1-9]\d{1,14}$/.test(formatedPhone)) {
     throw new AppError(
