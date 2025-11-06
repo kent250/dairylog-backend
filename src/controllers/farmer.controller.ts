@@ -158,6 +158,7 @@ export const createFarmer = asyncHandler(
     const farmerName = validatedData.farmer_name;
     const firstName = farmerName.split(" ")[0];
 
+
     //send SMS
     sendScheduledSms({
       content: `Hello, ${firstName}, You have been registered into ${req.user?.collection_name} as Milk Supplier`,
