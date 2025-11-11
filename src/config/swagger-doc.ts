@@ -2,6 +2,12 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './env.js';
 
+
+
+const apiFiles = config.environment === 'production'
+    ? ['./dist/src/routes/*.js']  // Path in the production Docker image
+    : ['./src/routes/*.ts'];      // Path for local development
+
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.1.1',
@@ -52,7 +58,7 @@ const options: swaggerJsdoc.Options = {
         },
 
     ],
-    apis: ['./src/routes/*.ts'],
+    apis: apiFiles,
 
 };
 
