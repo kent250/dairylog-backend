@@ -27,7 +27,7 @@ const options: swaggerJsdoc.Options = {
                 description: 'Development server',
             },
             {
-                url: `https://sea-lion-app-p7ri7.ondigitalocean.app/api`,
+                url: `https://dairylog-gsw5g.ondigitalocean.app/api`,
                 description: 'Production server',
             }
         ],
