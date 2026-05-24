@@ -70,7 +70,7 @@ const envSchema = z.object({
     .string()
     .min(32, "JWT_REFRESH_SECRET must be at least 32 characters long"),
 
-  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(12).max(14),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(14),
 
   // --- CORS ---
   // Transforms comma-separated strings into arrays, handles undefined/empty strings
