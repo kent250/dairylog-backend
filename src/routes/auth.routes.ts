@@ -150,6 +150,8 @@ const router = Router();
  */
 router.post("/register", registerNewCollectionUser);
 
+
+
 /**
  * @openapi
  * /auth/login:
@@ -170,11 +172,11 @@ router.post("/register", registerNewCollectionUser);
  *             properties:
  *               username:
  *                 type: string
- *                 example: admin
+ *                 example: gitega_milk_collection
  *               password:
  *                 type: string
  *                 format: password
- *                 example: admin@123
+ *                 example: Password123
  *     responses:
  *       200:
  *         description: Login successful
