@@ -5,6 +5,7 @@ import { type z } from "zod";
 
 import { users } from "./user.schema.js";
 import { milkRecordsTable } from "./milk-record.schema.js";
+import { farmerPurchasesTable } from "./farmer-purchase.schema.js";
 
 // ------------------------------------------------------------------
 // 1. DRiZZLE SCHEMA (Source of Truth)
@@ -36,6 +37,7 @@ export const farmersRelations = relations(farmersTable, ({ one, many }) => ({
     references: [users.id],
   }),
   milkRecords: many(milkRecordsTable),
+  purchases: many(farmerPurchasesTable),
 }));
 
 // ------------------------------------------------------------------

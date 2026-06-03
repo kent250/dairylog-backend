@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
