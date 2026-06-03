@@ -57,6 +57,13 @@
       "when": 1761923607930,
       "tag": "0007_remove-unique-constrait-on-password-column",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780486532630,
+      "tag": "0008_long_dust",
+      "breakpoints": true
     }
   ]
 }
