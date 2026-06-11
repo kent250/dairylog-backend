@@ -16,6 +16,7 @@ import { ERROR_CODES } from "../utils/error-utils/errorCodes.js";
 import { ApiResponse } from "../utils/api-response.js";
 import { asyncHandler } from "../utils/syncHandler.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { sendScheduledSms } from "../services/sms.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -143,6 +144,12 @@ export const createPurchase = asyncHandler(
         if (inserted.length === 0) {
             throw new AppError(ERROR_CODES.INTERNAL_ERROR, "Failed to create purchase record.");
         }
+
+        const firstName = farmer.farmer_name.split(" ")[0];
+        sendScheduledSms({
+            content: `Hello ${firstName}, ${quantity} ${unit} of ${product_name} worth ${total_amount} RWF has been purchased today on ${inserted[0].purchase_date}.`,
+            to: farmer.phone_number,
+        });
 
         return ApiResponse.created(
             res,
